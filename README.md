@@ -56,6 +56,11 @@
 
 ## 更新日志
 
+### 1.0.2（2026-09-23）
+
+- **修复设置页丢失左侧菜单**：`main.php` 原先自行输出整页 HTML（`doctype` / `html` / `head` / `body`），脱离后台整体框架；现改用官方 `admin_header.php` + `admin_top.php` + `admin_footer.php`，与其它后台页面一致；
+- 移除页面内重复的 `$zbp->GetHint()`（官方框架已统一输出）。
+
 ### 1.0.1（2026-09-23）
 
 - 修正源码注释与 README 中对注入口 Hook 的错误描述（虚构的 `Filter_Plugin_Zbp_Header/Footer` → 实际存在的 `Filter_Plugin_Zbp_MakeTemplatetags`）；

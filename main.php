@@ -56,76 +56,77 @@ $cfg = array(
 // 默认命名空间 token（必须与 CheckIsRefererValid 内的 CheckCSRFTokenValid() 默认校验配套）
 $csrf = $zbp->GetCSRFToken();
 
-?><!DOCTYPE html>
-<html lang="<?php echo htmlspecialchars((string) $zbp->lang['lang'], ENT_QUOTES, 'UTF-8'); ?>">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>页面加速 - <?php echo htmlspecialchars($zbp->name, ENT_QUOTES, 'UTF-8'); ?></title>
-<link rel="stylesheet" href="style.css?v=<?php echo AT8_PAGESPEED_VERSION; ?>">
-</head>
-<body>
-<div class="ps-wrap">
-	<div class="ps-head">
-		<h1>页面加速</h1>
-		<p>链接悬停预加载、图片懒加载、DNS 预取。纯前端优化，不改动系统任何业务流程。</p>
+$blogtitle = '页面加速';
+
+// 使用后台官方框架输出页头与左侧菜单（不自行输出 doctype / html / body，
+// 否则会脱离后台整体框架，出现「没有左侧菜单」的问题）
+require $blogpath . 'zb_system/admin/admin_header.php';
+require $blogpath . 'zb_system/admin/admin_top.php';
+?>
+<link rel="stylesheet" href="<?php echo $zbp->host; ?>zb_users/plugin/at8_pagespeed/style.css?v=<?php echo AT8_PAGESPEED_VERSION; ?>">
+<div id="divMain">
+	<div class="ps-wrap">
+
+		<div class="ps-head">
+			<h1>页面加速</h1>
+			<p>链接悬停预加载、图片懒加载、DNS 预取。纯前端优化，不改动系统任何业务流程。</p>
+		</div>
+
+		<form method="post" action="main.php">
+			<input type="hidden" name="act" value="save">
+			<input type="hidden" name="csrfToken" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
+
+			<div class="ps-card">
+				<div class="ps-card-title">链接预加载 <span class="ps-sub">instant.page：鼠标悬停 / 触摸按下时提前加载目标页，点击几乎零等待</span></div>
+				<div class="ps-row">
+					<label class="ps-switch">
+						<input type="checkbox" name="preload_enabled" value="1"<?php echo $cfg['preload_enabled'] ? ' checked' : ''; ?>>
+						<span>启用链接预加载</span>
+					</label>
+				</div>
+				<div class="ps-row">
+					<label>触发延迟（毫秒）</label>
+					<input type="number" name="preload_delay" min="0" max="2000" step="5" value="<?php echo $cfg['preload_delay']; ?>">
+					<span class="ps-tip">越小越激进（65 = 官方默认），越大越省流量</span>
+				</div>
+				<div class="ps-row">
+					<label>预加载黑名单</label>
+					<textarea name="blacklist" rows="6" placeholder="每行一个关键字，链接地址含该关键字时不预加载"><?php echo htmlspecialchars($cfg['blacklist'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+					<span class="ps-tip">默认已排除退出登录、后台、购物车、删除等敏感操作链接</span>
+				</div>
+			</div>
+
+			<div class="ps-card">
+				<div class="ps-card-title">图片懒加载 <span class="ps-sub">进入视口才加载图片与 iframe，首屏更快、流量更省</span></div>
+				<div class="ps-row">
+					<label class="ps-switch">
+						<input type="checkbox" name="lazy_enabled" value="1"<?php echo $cfg['lazy_enabled'] ? ' checked' : ''; ?>>
+						<span>启用图片懒加载</span>
+					</label>
+				</div>
+				<div class="ps-row">
+					<label>跳过首屏图片数量</label>
+					<input type="number" name="lazy_skip" min="0" max="20" value="<?php echo $cfg['lazy_skip']; ?>">
+					<span class="ps-tip">前 N 张图不懒加载，避免拖慢首屏大图（LCP）</span>
+				</div>
+			</div>
+
+			<div class="ps-card">
+				<div class="ps-card-title">DNS 预取 <span class="ps-sub">提前解析第三方资源域名（图床、统计、字体等）</span></div>
+				<div class="ps-row">
+					<label>附加域名</label>
+					<textarea name="dns_domains" rows="4" placeholder="每行一个域名，如：&#10;cdn.example.com&#10;img.example.com"><?php echo htmlspecialchars($cfg['dns_domains'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+					<span class="ps-tip">站点自身域名已自动包含，无需填写</span>
+				</div>
+			</div>
+
+			<div class="ps-foot">
+				<button type="submit" class="ps-btn">保存配置</button>
+			</div>
+		</form>
 	</div>
-
-	<?php $zbp->GetHint(); ?>
-
-	<form method="post" action="main.php">
-		<input type="hidden" name="act" value="save">
-		<input type="hidden" name="csrfToken" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-
-		<div class="ps-card">
-			<div class="ps-card-title">链接预加载 <span class="ps-sub">instant.page：鼠标悬停 / 触摸按下时提前加载目标页，点击几乎零等待</span></div>
-			<div class="ps-row">
-				<label class="ps-switch">
-					<input type="checkbox" name="preload_enabled" value="1"<?php echo $cfg['preload_enabled'] ? ' checked' : ''; ?>>
-					<span>启用链接预加载</span>
-				</label>
-			</div>
-			<div class="ps-row">
-				<label>触发延迟（毫秒）</label>
-				<input type="number" name="preload_delay" min="0" max="2000" step="5" value="<?php echo $cfg['preload_delay']; ?>">
-				<span class="ps-tip">越小越激进（65 = 官方默认），越大越省流量</span>
-			</div>
-			<div class="ps-row">
-				<label>预加载黑名单</label>
-				<textarea name="blacklist" rows="6" placeholder="每行一个关键字，链接地址含该关键字时不预加载"><?php echo htmlspecialchars($cfg['blacklist'], ENT_QUOTES, 'UTF-8'); ?></textarea>
-				<span class="ps-tip">默认已排除退出登录、后台、购物车、删除等敏感操作链接</span>
-			</div>
-		</div>
-
-		<div class="ps-card">
-			<div class="ps-card-title">图片懒加载 <span class="ps-sub">进入视口才加载图片与 iframe，首屏更快、流量更省</span></div>
-			<div class="ps-row">
-				<label class="ps-switch">
-					<input type="checkbox" name="lazy_enabled" value="1"<?php echo $cfg['lazy_enabled'] ? ' checked' : ''; ?>>
-					<span>启用图片懒加载</span>
-				</label>
-			</div>
-			<div class="ps-row">
-				<label>跳过首屏图片数量</label>
-				<input type="number" name="lazy_skip" min="0" max="20" value="<?php echo $cfg['lazy_skip']; ?>">
-				<span class="ps-tip">前 N 张图不懒加载，避免拖慢首屏大图（LCP）</span>
-			</div>
-		</div>
-
-		<div class="ps-card">
-			<div class="ps-card-title">DNS 预取 <span class="ps-sub">提前解析第三方资源域名（图床、统计、字体等）</span></div>
-			<div class="ps-row">
-				<label>附加域名</label>
-				<textarea name="dns_domains" rows="4" placeholder="每行一个域名，如：&#10;cdn.example.com&#10;img.example.com"><?php echo htmlspecialchars($cfg['dns_domains'], ENT_QUOTES, 'UTF-8'); ?></textarea>
-				<span class="ps-tip">站点自身域名已自动包含，无需填写</span>
-			</div>
-		</div>
-
-		<div class="ps-foot">
-			<button type="submit" class="ps-btn">保存配置</button>
-		</div>
-	</form>
 </div>
 <script>if (typeof ActiveLeftMenu == "function") { ActiveLeftMenu("nav_at8_pagespeed"); }</script>
-</body>
-</html>
+<?php
+require $blogpath . 'zb_system/admin/admin_footer.php';
+RunTime();
