@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin version="php">
+	<id>at8_pagespeed</id>
+	<name>页面加速</name>
+	<url>https://www.at8.fun/</url>
+	<note>页面访问加速：链接悬停预加载、图片懒加载、DNS 预取。纯前端输出层优化，不改动系统任何业务流程。</note>
+	<path>main.php</path>
+	<include>include.php</include>
+	<level>1</level>
+	<author>
+		<name>漫步白月光</name>
+		<email>361611074@qq.com</email>
+		<url>https://www.at8.fun/</url>
+	</author>
+	<source>
+		<name>explon</name>
+		<email>361611074@qq.com</email>
+		<url>https://www.at8.fun/</url>
+	</source>
+	<adapted>172900</adapted>
+	<version>1.0.0</version>
+	<pubdate>2026-09-23</pubdate>
+	<modified>2026-09-23</modified>
+	<price>0</price>
+	<advanced>
+		<dependency></dependency>
+		<rewritefunctions></rewritefunctions>
+		<existsfunctions></existsfunctions>
+		<conflict></conflict>
+	</advanced>
+</plugin>
