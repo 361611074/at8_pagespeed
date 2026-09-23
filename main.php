@@ -17,9 +17,9 @@ if (!$zbp->CheckPlugin('at8_pagespeed')) {
     die();
 }
 
-// 保存配置（写操作：CSRF 校验）
+// 保存配置（写操作：CSRF 校验，官方姿势——失败自动 ShowError 终止）
 if (GetVars('act', 'POST') === 'save') {
-    CheckCSRFTokenValid(GetVars('csrfToken', 'POST'), 'at8_pagespeed');
+    CheckIsRefererValid();
 
     $c = $zbp->Config('at8_pagespeed');
     $c->preload_enabled = (GetVars('preload_enabled', 'POST') == '1') ? 1 : 0;
@@ -52,7 +52,8 @@ $cfg = array(
     'lazy_skip'       => (int) at8_pagespeed_cfg('lazy_skip'),
     'dns_domains'     => (string) at8_pagespeed_cfg('dns_domains'),
 );
-$csrf = $zbp->GetCSRFToken('at8_pagespeed');
+// 默认命名空间 token（必须与 CheckIsRefererValid 内的 CheckCSRFTokenValid() 默认校验配套）
+$csrf = $zbp->GetCSRFToken();
 
 ?><!DOCTYPE html>
 <html lang="<?php echo $zbp->lang['lang']; ?>">
