@@ -1,9 +1,9 @@
-# at8_pagespeed 1.0.4 — 发布检查清单（RELEASE_CHECKLIST）
+# at8_pagespeed 1.0.5 — 发布检查清单（RELEASE_CHECKLIST）
 
 检查基准：《Z-BlogPHP 插件 AI Agent 开发规范》§29
 实测环境：Z-BlogPHP **1.7.5** / PHP 7.3.4（本地 `php -l`）+ PHP 8.2（测试站 zblog.xmm.fan）/ MySQL
 检查日期：2026-09-23
-版本：1.0.4（`plugin.xml` / `AT8_PAGESPEED_VERSION` / 本文件 三处一致）
+版本：1.0.5（`plugin.xml` / `AT8_PAGESPEED_VERSION` / 本文件 三处一致）
 
 ## 1. 元数据与标识
 
@@ -11,7 +11,7 @@
 |---|---|---|
 | 插件 ID | `at8_pagespeed` | ✅ 长期稳定，未随重构改名 |
 | 插件名称 | 页面加速 | ✅ |
-| 版本号 | 1.0.4（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
+| 版本号 | 1.0.5（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
 | 目录 / 文件前缀 | 函数 `at8_pagespeed_*`、CSS `.ps-*`、JS `window.at8Ps*`、配置键 `conf_Name=at8_pagespeed` | ✅ 无通用命名 |
 | `plugin.xml` 必填节点 | id/name/url/note/description/path/include/level/author/source/adapted/version/pubdate/modified/price/**phpver**/advanced | ✅ 齐全 |
 | 作者与官网 | 漫步白月光 / https://www.at8.fun/ | ✅ |
@@ -22,7 +22,7 @@
 | 项 | 值 | 依据 |
 |---|---|---|
 | 最低 Z-BlogPHP | 1.7.x | 依赖 `Filter_Plugin_Zbp_MakeTemplatetags`、`CheckIsRefererValid`、`$zbp->ismanage`、`Config()` 单参属性式 |
-| 最低 PHP | **5.6**（`plugin.xml` 显式声明；打包脚本读取，不再写死 5.2） | 未使用 PHP 7 专有特性；实测 7.3.4 与 8.2 通过 |
+| 最低 PHP | **7.4**（`plugin.xml` 显式声明；打包脚本读取，不再写死 5.2） | ① 全量文件 PHP **7.3.4** 通过 `php -l`（严于 7.4）；② 运行时 PHP **8.2** 实测零报错；③ 无 PHP 8.0+ 专有语法（已全量扫描 `?->` / `match` 表达式 / `str_contains` / `#[Attribute]` / 构造器提升 / 联合类型 / `enum` / `readonly` 均 0 命中） |
 | 数据库 | MySQL / SQLite / PostgreSQL | 不建表、不写库结构，仅用官方配置存取 |
 | 第三方依赖 | 仅内置 instant.page v5.2.0（MIT，本地文件，无 Composer、无 CDN） | §23 |
 
@@ -94,6 +94,51 @@
 - 界面回归（1.0.2）：**17 项断言 17 PASS / 0 FAIL** —— 设置页已接入官方后台框架，`admin2.css` / `zblogphp.js` 已加载、顶栏 `#topmenu` 与左侧菜单 14 项（含 `nav_at8_pagespeed`）正常渲染、仅 1 个 doctype、无 PHP 告警、保存往返正常
 - 布局对齐实测（1440×900）：`#divMain` 宽 1280 / 起点 x=150 / `max-width:none`、内容容器内距 `20px 24px 60px` / `max-width:1400px` —— 与 `at8_media_library` 设置页逐项一致
 - 回归复现脚本：`audit_pagespeed.py`、`audit_repro_disable.py`、`test_zba_install_clean.py`、`deploy_ps_102.py`、`shot_release_ps.py`（截图）
+
+## 7.1 模拟用户全流程 + debug 模式（`test_user_flow_debug.py`，**52 项 52 PASS**）
+
+全程开启 `ZC_DEBUG_MODE=true`，按真实用户使用顺序走一遍，每步都扫
+`Fatal / Parse / Warning / Notice / Deprecated / Strict Standards / Uncaught / Undefined` 八类报错。
+
+| 阶段 | 操作 | 结果 |
+|---|---|---|
+| 登录 | 登录页 → 提交凭据 → 进后台首页 | ✅ 零报错 |
+| 配置（正常值） | 打开设置页 → 改 6 项 → 保存 | ✅ 302 回本页、值全部落库 |
+| 配置（边界值） | 延迟填 `0`、跳过填 `0` | ✅ 接受（最激进档） |
+| 配置（超上限） | 延迟填 `99999`、跳过填 `999` | ✅ 被夹紧为 `2000` / `20`，未写入脏值 |
+| 配置（恶意输入） | DNS 填 `not a domain` / `http://evil.com/x` / `<script>alert(1)</script>` / `good.example.com` | ✅ 库里只剩 `evil.com` + `good.example.com`；前台 DNS 链接全部合法、无恶意串 |
+| 关闭全部开关 | 两个功能都关 → 前台验证 | ✅ 不再注入任何脚本 |
+| 媒体库 | 上传中文名 PNG → 改名 → 删除 | ✅ 记录 +1 → 改名无报错 → 删除后回到初始 |
+| 媒体库（非法输入） | `act=evil<script>`、`id=1 OR 1=1` | ✅ 400 拒绝且不回显 / 不误删数据 |
+| 停用 → 重启用 | 两个插件各一轮 | ✅ ★停用不丢配置（7→7）、不丢附件记录；重启用后自定义值 180 沿用 |
+| debug 开关 | 结束时还原 `false` | ✅ |
+
+> 附带反向验证：`?act=Admin`（大写 A）会被拦回登录页 —— Z-Blog 的 actions 表全小写，
+> 这是本插件早期踩过的坑，已固化为断言。
+
+## 7.2 官方《注意事项速查表》逐条核对（桌面 `zblog开发注意事项`）
+
+| 条目 | 核对结果 |
+|---|---|
+| 开发模式下不报错 | ✅ 见 7.1，八类报错零命中 |
+| 影响数据/文件的操作须加 CSRF Token | ✅ 设置页 `CheckIsRefererValid()`；实测篡改 token 被拦（HTTP 500）且配置未变 |
+| 函数名以应用 ID 开头 | ✅ 全部 `at8_pagespeed_*` |
+| 自建表 / 模块命名 `plugin_appID_*` | ✅ N/A（不建表、不建模块） |
+| 站内链接须用绝对地址（`$zbp->host` / bloghost） | ✅ 菜单、资源、API 全部 `$zbp->host` 拼接 |
+| 服务端网络请求用自带 Network | ✅ N/A（无任何出站请求） |
+| 用 `zbignore.txt` 排除打包文件 | ✅ 已排除 README / CHANGELOG / RELEASE_CHECKLIST / screenshots / `cache` / `.git` |
+| 不自带 jQuery | ✅ 媒体库用原生 `XMLHttpRequest`；本插件无 JS 框架依赖 |
+| 编辑器通用性 | ✅ N/A（不涉及编辑器） |
+| 主题模板 HTML 在当前文件内闭合 | ✅ N/A（插件；后台页走官方框架 `admin_header/top/footer`） |
+| 定制字体图标而非引入整套 | ✅ 无外部图标库 |
+| 不写死与自己强关联的东西 | ✅ 无硬编码站点域名 / 路径 |
+| CSS、JS 走外部引用，不用 `style=""` | ✅ CSS/JS 均外部文件；`style=""` 0 处（仅测试夹具里有） |
+| **放弃 `var`，改用 `let` / `const`** | ✅ **1.0.5 修正**：两个自研脚本原用 `var`（共 23 处），已全部改为 `let`/`const` |
+| `link:css` / `script:js` 弃用非必要属性 | ✅ 无 `type="text/javascript"`；`defer` 为功能必需保留 |
+| 正则用否定匹配而非 `.*?` | ✅ `.*?` 0 处（已扫描） |
+| logo 等替代性文件不走附件机制 + zbignore 防覆盖 | ✅ `logo.png` 随包发布，`zbignore` 未排除（需随包）但不走附件机制 |
+| 保存配置用 `SetHint` + `Redirect` 而非 `ShowHint` | ✅ `main.php` 用 `$zbp->SetHint('good', ...)` + `Redirect('./main.php')` |
+| 有限度使用 Heredoc | ✅ 未使用 |
 
 ## 8. 安装 / 停用 / 卸载 / 升级测试清单
 
@@ -173,10 +218,13 @@
 
 | 脚本 | 覆盖项 | 当前结果 |
 |---|---|---|
-| `test_zba_install_clean.py` | A1 / A3 / A4 / E1 / E3 / E4 / E5 | 25 PASS / 0 FAIL |
+| `test_user_flow_debug.py` | **模拟用户全流程 + debug**：登录 / 配置 / 边界值 / 恶意输入 / 传文件 / 停用 / 启用 | **52 PASS / 0 FAIL** |
+| `test_zba_install_clean.py` | A1 / A3 / A4 / E1 / E3 / E4 / E5（官方上传应用链路） | 25 PASS / 0 FAIL |
 | `audit_repro_disable.py` | C1 / D1 / D2（数据丢失 Bug 复现与修复验证） | PASS |
 | `audit_pagespeed.py` | A2 / A5 / C2 / C3 / D2 + 安全与权限 | 39 PASS / 0 FAIL |
-| `test_ps_js_units.py` | 前台脚本功能级（黑名单 / 懒加载 / 动态兜底） | 22 PASS / 0 FAIL |
+| `test_ps_js_units.py` | 前台脚本功能级（黑名单 / 懒加载 / 容器级排除 / 动态兜底） | 22 PASS / 0 FAIL |
+| `_check_zba_struct.py` | 打包结构（gzip 魔数 / 根属性 / folder+file 节点 / 路径规范） | 26 PASS / 0 FAIL |
+| `_scan_security.py` | 危险函数 / 外站资源 / BOM / `!important` | 需复核项 0 |
 
 ## 9. 发布物
 

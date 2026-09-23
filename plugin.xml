@@ -28,15 +28,18 @@
 	     1.7.x 的 $zbp->version = MAJOR.MINOR.COMMIT，如 1.7.5 Build 3540 → 173540；
 	     取 172900 表示面向 1.7 系列，可拦住 1.6 及更早版本。 -->
 	<adapted>172900</adapted>
-	<version>1.0.4</version>
+	<version>1.0.5</version>
 	<pubdate>2026-09-23</pubdate>
 	<modified>2026-09-23</modified>
 	<price>0</price>
-	<!-- 最低 PHP 版本（安装门槛，lib/app.php 据此拒绝安装）：
-	     代码语法与函数最低要求 5.4（使用 JSON_UNESCAPED_UNICODE）；
-	     声明下限取 5.6——5.4 / 5.5 未做实测，不作兼容承诺，避免放行未经验证的环境。
-	     实测环境：PHP 7.3 / 8.2。 -->
-	<phpver>5.6</phpver>
+	<!-- 最低 PHP 版本（安装门槛，lib/app.php 据此拒绝安装）：7.4
+	     依据：① 全量文件在 PHP 7.3.4 通过 php -l（7.3.4 严于 7.4，向下兼容已覆盖）；
+	           ② 运行时在 PHP 8.2 测试站实测零报错（debug 模式 5 个页面）；
+	           ③ 源码未使用任何 PHP 8.0+ 专有语法（已全量扫描：无 ?-> / match 表达式 /
+	              str_contains / 属性 #[...] / 构造器提升 / 联合类型 / enum / readonly）。
+	     说明：代码本身不含 PHP 7.4 以下的写法，7.4 是「承诺做兼容的下限」而非语法下限，
+	           低于该版本的站点会在安装阶段被拦下，避免放行未承诺支持的环境。 -->
+	<phpver>7.4</phpver>
 	<advanced>
 		<dependency></dependency>
 		<rewritefunctions></rewritefunctions>

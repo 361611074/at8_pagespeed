@@ -6,8 +6,9 @@
  * 引用传递 $tags，追加 $tags['header'] / $tags['footer']）注入资源，
  * 不注册任何系统业务流程相关的 Hook（不拦截上传 / 删除 / 发布 / 评论等）。
  *
- * 最低 PHP：代码语法与函数最低要求 5.4（使用 JSON_UNESCAPED_UNICODE）；
- * 声明下限取 5.6——5.4 / 5.5 未做实测，不作兼容承诺，避免放行未经验证的环境。
+ * 最低 PHP：7.4（plugin.xml 的 <phpver>，安装门槛）。
+ * 依据：全量文件在 PHP 7.3.4 通过 php -l（严于 7.4）；运行时在 PHP 8.2 实测零报错；
+ * 源码未使用任何 PHP 8.0+ 专有语法。低于 7.4 的环境在安装阶段被拦下，不作兼容承诺。
  *
  * @author 漫步白月光 https://www.at8.fun/
  */
@@ -16,7 +17,7 @@ if (!defined('ZBP_PATH')) {
     exit('Access denied');
 }
 
-define('AT8_PAGESPEED_VERSION', '1.0.4');
+define('AT8_PAGESPEED_VERSION', '1.0.5');
 
 RegisterPlugin('at8_pagespeed', 'ActivePlugin_at8_pagespeed');
 
@@ -90,6 +91,32 @@ function at8_pagespeed_defaults()
 }
 
 /**
+ * 归一化单个 DNS 预取域名：去协议、去路径，再校验域名格式。
+ *
+ * 合法返回域名（如 example.com），不合法返回空串。
+ * 保存时与输出时都调用它（纵深防御）：库里不落脏数据，输出也不可能带出脏数据。
+ *
+ * @param string $d 原始输入
+ * @return string
+ */
+function at8_pagespeed_normalize_domain($d)
+{
+    $d = trim((string) $d);
+    if ($d === '') {
+        return '';
+    }
+    $d = preg_replace('#^https?://#i', '', $d);      // 去协议
+    $d = trim(preg_replace('@[/?#].*$@', '', $d));   // 去路径 / 查询 / 锚点
+    if ($d === '' || strlen($d) > 253) {
+        return '';
+    }
+    if (!preg_match('/^[a-z0-9][a-z0-9.-]*(\.[a-z0-9.-]+)+$/i', $d)) {
+        return '';
+    }
+    return $d;
+}
+
+/**
  * 配置读取（带默认值；1.7.5 Config 为属性式读写，$zbp->Config($name) 请求内缓存）
  *
  * @param string $key 配置键
@@ -138,14 +165,9 @@ function at8_pagespeed_tags(&$tags)
     if (is_string($domains) && $domains !== '') {
         $arr = preg_split('/[\r\n]+/', $domains);
         foreach ($arr as $d) {
-            $d = trim($d);
+            // 与保存时共用同一套归一化规则（输出再做一次，防历史脏数据）
+            $d = at8_pagespeed_normalize_domain($d);
             if ($d === '') {
-                continue;
-            }
-            // 只保留合法域名形态：去协议、去路径，剩余部分须为域名格式
-            $d = preg_replace('#^https?://#i', '', $d);
-            $d = trim(preg_replace('@[/?#].*$@', '', $d));
-            if ($d === '' || !preg_match('/^[a-z0-9][a-z0-9.-]*(\.[a-z0-9.-]+)+$/i', $d) || strlen($d) > 253) {
                 continue;
             }
             $head .= '<link rel="dns-prefetch" href="' . htmlspecialchars($d, ENT_QUOTES, 'UTF-8') . '">' . "\r\n";

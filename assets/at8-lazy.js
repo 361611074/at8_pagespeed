@@ -17,16 +17,18 @@
  *
  * 已知局限：本脚本在解析完成后执行，由前端脚本在加载后动态插入的图片不会被处理
  * （不做全文档 MutationObserver，以免在动态页面上产生不可预期的属性写入）。
+ *
+ * 代码风格：按官方《注意事项速查表》建议放弃 var，统一使用 let / const（需 ES6 环境）。
  */
 (function () {
 	'use strict';
 
-	var SKIP = (typeof window.at8PsLazySkip === 'number') ? window.at8PsLazySkip : 2;
+	let SKIP = (typeof window.at8PsLazySkip === 'number') ? window.at8PsLazySkip : 2;
 	SKIP = Math.max(0, Math.min(20, SKIP));
 
 	/** 沿祖先链查找 data-no-lazy（不依赖 Element.closest，兼容更广） */
 	function inNoLazy(el) {
-		var n = el;
+		let n = el;
 		while (n && n.nodeType === 1) {
 			if (n.hasAttribute && n.hasAttribute('data-no-lazy')) {
 				return true;
@@ -50,11 +52,11 @@
 	}
 
 	function apply() {
-		var media = document.querySelectorAll('img, iframe');
-		var viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
-		var plan = [];
-		var seen = 0;
-		var i, el, r;
+		const media = document.querySelectorAll('img, iframe');
+		const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+		const plan = [];
+		let seen = 0;
+		let i, el, r;
 
 		// ---- 第一趟：只读测量，不写任何属性 ----
 		for (i = 0; i < media.length; i++) {

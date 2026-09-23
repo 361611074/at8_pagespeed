@@ -37,7 +37,16 @@ if (GetVars('act', 'POST') === 'save') {
     $c->blacklist = implode("\n", $clean);
     $c->lazy_enabled = (GetVars('lazy_enabled', 'POST') == '1') ? 1 : 0;
     $c->lazy_skip = max(0, min(20, (int) GetVars('lazy_skip', 'POST')));
-    $c->dns_domains = trim((string) GetVars('dns_domains', 'POST'));
+    // DNS 域名：保存时就归一化并丢弃非法项（不落脏数据；输出时还会再校验一次）
+    $dnsIn = preg_split('/[\r\n]+/', trim((string) GetVars('dns_domains', 'POST')));
+    $dns = array();
+    foreach ($dnsIn as $d) {
+        $n = at8_pagespeed_normalize_domain($d);
+        if ($n !== '' && !in_array($n, $dns, true)) {
+            $dns[] = $n;
+        }
+    }
+    $c->dns_domains = implode("\n", $dns);
     $zbp->SaveConfig('at8_pagespeed');
 
     $zbp->SetHint('good', '配置已保存');
