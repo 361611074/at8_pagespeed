@@ -1,6 +1,7 @@
 README.md
 CHANGELOG.md
 RELEASE_CHECKLIST.md
+screenshots
 zbignore.txt
 cache
 .git

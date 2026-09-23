@@ -1,4 +1,4 @@
-# at8_pagespeed 1.0.2 — 发布检查清单（RELEASE_CHECKLIST）
+# at8_pagespeed 1.0.3 — 发布检查清单（RELEASE_CHECKLIST）
 
 检查基准：《Z-BlogPHP 插件 AI Agent 开发规范》§29
 实测环境：Z-BlogPHP **1.7.5** / PHP 7.3.4（本地 `php -l`）+ PHP 8.2（测试站 zblog.xmm.fan）/ MySQL
@@ -10,10 +10,11 @@
 |---|---|---|
 | 插件 ID | `at8_pagespeed` | ✅ 长期稳定，未随重构改名 |
 | 插件名称 | 页面加速 | ✅ |
-| 版本号 | 1.0.2（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
+| 版本号 | 1.0.3（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
 | 目录 / 文件前缀 | 函数 `at8_pagespeed_*`、CSS `.ps-*`、JS `window.at8Ps*`、配置键 `conf_Name=at8_pagespeed` | ✅ 无通用命名 |
 | `plugin.xml` 必填节点 | id/name/url/note/description/path/include/level/author/source/adapted/version/pubdate/modified/price/**phpver**/advanced | ✅ 齐全 |
 | 作者与官网 | 漫步白月光 / https://www.at8.fun/ | ✅ |
+| `<source>` 来源名称 | 漫步白月光（**1.0.3 修正**：原为模板遗留值，与 `<author>` 不一致） | ✅ 已一致 |
 
 ## 2. 最低系统与 PHP 要求
 
@@ -81,15 +82,61 @@
 
 - 本地：`php -l` 全通过，`node --check` 通过（3 个 JS），`plugin.xml` 可解析，`!important` = 0
 - 测试站（zblog.xmm.fan）：**39 项断言 39 PASS / 0 FAIL**，含 debug 模式下 5 个页面零 `Notice/Warning/Deprecated`
-- 安装回归：**23 项断言 23 PASS / 0 FAIL**（干净包经官方「应用中心 → 上传应用」链路实装；落地清单与包内清单严格相等；无 `.git` 残留）
+- 安装回归（1.0.3）：**25 项断言 25 PASS / 0 FAIL**（干净包经官方「应用中心 → 上传应用」链路实装；落地清单与包内清单严格相等；无 `.git` 残留；额外落地文件仅 `cache/`，属运行时缓存）
+- **升级回归（1.0.2 → 1.0.3，官方上传应用链路覆盖安装）**：版本常量与 `plugin.xml` 同步为 1.0.3 ✅ / 配置 7 项全部保留 ✅ / 9 个落地文件与包内清单一致 ✅
+- **前台注入实测（1.0.3）**：`<head>` 注入 `<!-- at8_pagespeed 1.0.3 -->` + `x-dns-prefetch-control` + `link[rel=dns-prefetch]`；`</body>` 前注入 `at8PsLazySkip` / `at8-lazy.js` / `at8PsBlacklist` / `at8-guard.js` / `instantpage.js`（含 `data-instant-intensity="180"`）—— 与代码预期逐项一致
+- **debug 模式实测**：页面内 `Fatal error` / `Parse error` / `Warning` / `Deprecated` / `Notice` / `Uncaught` 关键字**零命中** ✅
 - 界面回归（1.0.2）：**17 项断言 17 PASS / 0 FAIL** —— 设置页已接入官方后台框架，`admin2.css` / `zblogphp.js` 已加载、顶栏 `#topmenu` 与左侧菜单 14 项（含 `nav_at8_pagespeed`）正常渲染、仅 1 个 doctype、无 PHP 告警、保存往返正常
 - 布局对齐实测（1440×900）：`#divMain` 宽 1280 / 起点 x=150 / `max-width:none`、内容容器内距 `20px 24px 60px` / `max-width:1400px` —— 与 `at8_media_library` 设置页逐项一致
-- 回归复现脚本：`audit_pagespeed.py`、`audit_repro_disable.py`、`test_zba_install_clean.py`、`deploy_ps_102.py`
+- 回归复现脚本：`audit_pagespeed.py`、`audit_repro_disable.py`、`test_zba_install_clean.py`、`deploy_ps_102.py`、`shot_release_ps.py`（截图）
 
 ## 8. 发布物
 
-- `at8_pagespeed_1.0.2_20260923.zba`（**25.4 KB，9 文件**；真实插件文件 + `LICENSE`，已剔除 README / CHANGELOG / RELEASE_CHECKLIST / zbignore / `cache` / `.git`）
+- `at8_pagespeed_1.0.3_20260923.zba`（**25.4 KB，9 文件**；真实插件文件 + `LICENSE`，已剔除 README / CHANGELOG / RELEASE_CHECKLIST / `screenshots` / zbignore / `cache` / `.git`）
   > ⚠️ 打包污染教训：本插件目录内就是 git 工作区，早期打包脚本只按 `zbignore.txt` 排除，
   > 导致 `.git` 整棵树（35 个文件、约 51 KB）被打进分包。现已在 `build_zba.php` 加入
   > 「不依赖 zbignore 的强制排除清单」，并对包内文件做逐文件 MD5 校验（`_verify_zba.py`）。
+- 上架截图 `screenshots/`（不进分包，仅供应用中心上传）：`01-后台设置页.png`（1600×1310）、
+  `02-前台页面-加速生效.png`（1600×1000）、`03-前台注入优化代码.png`（1600×485）
 - GitHub：https://github.com/361611074/at8_pagespeed
+
+## 9. Z-Blog 应用中心上架自检（对官方《发布应用》标准逐条）
+
+依据：https://docs.zblogcn.com/php/dev-publish 与《应用审核拒绝标准》。
+
+### A. 通用
+
+| 标准 | 自检结果 |
+|---|---|
+| 开启 debug 模式后不得报错 | ✅ 测试站 debug 插件开启状态下，前台与后台页面 `Fatal/Parse/Warning/Deprecated/Notice/Uncaught` 零命中 |
+| 不得含有木马等有害代码 | ✅ 全部源码人工可读，无 eval / base64 解码执行 / 混淆 |
+| 不得含有被加密的 PHP | ✅ 全明文提交，无 Z5 或任何加密 |
+| PHP 文件须 UTF-8 无 BOM | ✅ 全量检测 0 处 BOM |
+| 不得有安全漏洞（SQL 注入 / XSS / CSRF） | ✅ 无 SQL 拼接；输出全部转义；写操作 `CheckIsRefererValid()` + `CheckRights('admin')` |
+| **不得引用外站资源** | ✅ 全部资源本站内置（`assets/` 本地文件 + 站内绝对路径）；instant.page 为本地文件而非 CDN |
+| 自动审核不得有黄色提示（老旧 JS 等） | ⚠️ 内置 instant.page v5.2.0（上游最新版，MIT，本地文件）；如自动审核报提示，按意见替换版本 |
+| 不得跳过应用中心支付系统搞内置收费 | ✅ 完全免费，无任何付费校验或外部接口 |
+| 不得修改系统源码或默认语言包 | ✅ `zb_system/` 与语言包零改动 |
+
+### C. 插件专项
+
+| 标准 | 自检结果 |
+|---|---|
+| 数据库表与 Class 使用 zbp 标准规范 | ✅ 不建表、不自建 Class |
+| 数据库操作走系统链式对象，不自行拼接 SQL | ✅ 不直接操作数据库，仅用 `$zbp->Config()` 官方配置存取 |
+| 应用 `$zbp->CheckRights` 判权限，而非 `$zbp->User->Level` | ✅ `main.php` 用 `CheckRights('admin')`，且未出现裸 `User->Level` 判定 |
+
+### D. 应用发布内容
+
+| 标准 | 自检结果 |
+|---|---|
+| 后台截图（有后台配置须提供） | ✅ `01-后台设置页.png` |
+| 前台展示截图 | ✅ `02-前台页面-加速生效.png`（前台外观不受影响）+ `03-前台注入优化代码.png`（注入内容证据） |
+| 基本 / 详细使用说明与功能介绍 | ✅ `plugin.xml` 的 `<description>` 详细说明三大功能；`README.md` 含功能、安装、生命周期、安全说明 |
+
+### E. 禁止条款
+
+| 标准 | 自检结果 |
+|---|---|
+| 禁止抄袭复制有版权保护的主题模板 | ✅ 原创实现；第三方仅 instant.page（MIT，已保留原始许可头并在 `LICENSE` 声明）；**1.0.3 已清除 `<source>` 中与他人标识冲突的模板遗留值** |
+| 禁止多次提交无意义应用刷排行 | ✅ 首次提交本应用 |
