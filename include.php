@@ -2,9 +2,12 @@
 /**
  * 页面加速 at8_pagespeed
  *
- * 纯前端输出层优化：只使用官方 Filter_Plugin_Zbp_MakeTemplatetags（1.7.x 唯一前台注入点，
+ * 纯前端输出层优化：只使用官方 Filter_Plugin_Zbp_MakeTemplatetags（1.7.x 前台注入点，
  * 引用传递 $tags，追加 $tags['header'] / $tags['footer']）注入资源，
- * 不接管、不修改系统任何业务流程（上传 / 删除 / 发布等一概不碰）。
+ * 不注册任何系统业务流程相关的 Hook（不拦截上传 / 删除 / 发布 / 评论等）。
+ *
+ * 最低 PHP：代码语法与函数最低要求 5.4（使用 JSON_UNESCAPED_UNICODE）；
+ * 声明下限取 5.6——5.4 / 5.5 未做实测，不作兼容承诺，避免放行未经验证的环境。
  *
  * @author 漫步白月光 https://www.at8.fun/
  */
@@ -13,15 +16,15 @@ if (!defined('ZBP_PATH')) {
     exit('Access denied');
 }
 
-define('AT8_PAGESPEED_VERSION', '1.0.3');
+define('AT8_PAGESPEED_VERSION', '1.0.4');
 
 RegisterPlugin('at8_pagespeed', 'ActivePlugin_at8_pagespeed');
 
 /**
  * 挂载官方过滤器：
- * - MakeTemplatetags：前台模板标签构建时追加 header / footer 输出（1.7.5 官方唯一前台注入点）
+ * - MakeTemplatetags：前台模板标签构建时追加 header / footer 输出（1.7.x 官方前台注入点）
  * - Admin_LeftMenu：后台左侧菜单
- * 不接管、不修改系统任何业务流程（上传 / 删除 / 发布等一概不碰）。
+ * 两者都只是「追加输出」与「加菜单」，不介入任何业务流程。
  */
 function ActivePlugin_at8_pagespeed()
 {
@@ -164,7 +167,20 @@ function at8_pagespeed_tags(&$tags)
     // instant.page 悬停预加载（文件内置，不引用外站）
     if ((int) at8_pagespeed_cfg('preload_enabled') === 1) {
         $delay = max(0, min(2000, (int) at8_pagespeed_cfg('preload_delay')));
-        $intensity = ($delay == 65) ? '' : ' data-instant-intensity="' . $delay . '"';
+
+        /*
+         * 【关键】instant.page v5 的触发延迟读取自 document.body 的 data-instant-intensity，
+         * 而不是 <script> 标签上的属性（那是 v4 的用法，v5 已改）。
+         * 源码依据（内置文件 assets/instantpage.js）：
+         *   init() 内 `if ('instantIntensity' in document.body.dataset) { ... _delayOnHover = intensityAsInteger }`。
+         * 因此必须在其执行前把这个属性写到 body 上；若写在 script 标签上则完全无人读取，
+         * 后台的「触发延迟」设置会静默失效、始终走内置默认 65ms。
+         * 用同步内联脚本在解析期写入（footer 位于 body 内，此时 document.body 已存在），
+         * 不依赖任何外部文件是否加载成功；at8-guard.js 内再做一次兜底。
+         */
+        $foot .= '<script>(function(){var b=document.body;if(b){b.setAttribute("data-instant-intensity","'
+            . $delay . '");}})();</script>' . "\r\n";
+
         // 黑名单关键字传给守卫脚本：命中链接打 data-no-instant，预加载自动跳过
         $bl = at8_pagespeed_cfg('blacklist');
         $arr = array();
@@ -176,9 +192,10 @@ function at8_pagespeed_tags(&$tags)
                 }
             }
         }
-        $foot .= '<script>window.at8PsBlacklist=' . json_encode($arr, JSON_UNESCAPED_UNICODE) . ';</script>' . "\r\n";
+        $foot .= '<script>window.at8PsBlacklist=' . json_encode($arr, JSON_UNESCAPED_UNICODE)
+            . ';window.at8PsPreloadDelay=' . $delay . ';</script>' . "\r\n";
         $foot .= '<script src="' . $base . 'at8-guard.js?v=' . $v . '" defer></script>' . "\r\n";
-        $foot .= '<script src="' . $base . 'instantpage.js?v=' . $v . '" defer' . $intensity . '></script>' . "\r\n";
+        $foot .= '<script src="' . $base . 'instantpage.js?v=' . $v . '" defer></script>' . "\r\n";
     }
 
     $tags['footer'] .= $foot;

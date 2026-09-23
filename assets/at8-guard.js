@@ -1,49 +1,131 @@
 /**
  * at8_pagespeed · 预加载守卫
- * 给命中黑名单关键字的链接打 data-no-instant 标记，
- * instant.page 看到该标记即跳过预加载（退出登录、购物车、删除等敏感操作零干扰）。
+ *
+ * 1) 给命中黑名单关键字的链接打 data-no-instant 标记，instant.page 见标记即跳过预加载
+ *    （退出登录、购物车、支付、删除等敏感操作不被提前请求）；
+ *    instant.page v5 的判定依据（内置文件源码）：`if ('noInstant' in anchorElement.dataset) return`。
+ * 2) 兜底写入 instant.page v5 的触发延迟（v5 从 document.body 的 data 属性读取）。
+ *
+ * 黑名单匹配采用三重比对，避免因大小写或 URL 编码差异被绕过：
+ *   ① 原样 href 转小写；
+ *   ② URL 解码后再转小写（拦 log%6Fut / %2Fadmin 之类编码写法）；
+ *   ③ 浏览器归一化后的 path + search 转小写（拦相对路径 / 大小写不一致）。
  */
 (function () {
 	'use strict';
 
-	var list = (typeof window.at8PsBlacklist === 'object' && window.at8PsBlacklist.length)
-		? window.at8PsBlacklist : [];
-	if (!list.length) return;
+	// ---- 兜底：确保 instant.page v5 能读到触发延迟 ----
+	var delay = window.at8PsPreloadDelay;
+	if (typeof delay === 'number' && isFinite(delay) && document.body
+		&& !document.body.hasAttribute('data-instant-intensity')) {
+		document.body.setAttribute('data-instant-intensity', String(delay));
+	}
+
+	var list = (window.at8PsBlacklist && typeof window.at8PsBlacklist === 'object'
+		&& window.at8PsBlacklist.length) ? window.at8PsBlacklist : [];
+
+	/** 安全解码：无 % 或解码失败时返回空串（调用方会跳过该重比对） */
+	function decode(s) {
+		if (s.indexOf('%') === -1) {
+			return '';
+		}
+		try {
+			return decodeURIComponent(s);
+		} catch (e) {
+			return '';
+		}
+	}
+
+	/** 是否命中黑名单 */
+	function hit(a) {
+		var raw = a.getAttribute('href') || '';
+		if (raw === '' || raw.charAt(0) === '#') {
+			return false;
+		}
+
+		var c1 = raw.toLowerCase();
+		var c2 = decode(raw).toLowerCase();
+		// a.pathname / a.search 为浏览器归一化结果；mailto: 等协议下取值无害
+		var c3 = (typeof a.pathname === 'string')
+			? (a.pathname + (a.search || '')).toLowerCase() : '';
+
+		for (var j = 0; j < list.length; j++) {
+			var k = String(list[j]).toLowerCase();
+			if (k === '') {
+				continue;
+			}
+			if (c1.indexOf(k) !== -1 || (c2 !== '' && c2.indexOf(k) !== -1)
+				|| (c3 !== '' && c3.indexOf(k) !== -1)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * 祖先是否已声明排除预加载。
+	 *
+	 * instant.page v5 只读取 <a> 自身的 dataset.noInstant（内置文件源码实锤），
+	 * 不支持容器级排除；这里补齐该能力——站点可在导航 / 挂件 / 评论区的容器上
+	 * 写一次 data-no-instant，整块区域的链接都不再被预加载。
+	 * 手动向上遍历（不依赖 Element.closest，兼容老浏览器）。
+	 */
+	function optedOutByAncestor(a) {
+		var p = a.parentNode;
+		while (p && p.nodeType === 1) {
+			if (p.hasAttribute && p.hasAttribute('data-no-instant')) {
+				return true;
+			}
+			p = p.parentNode;
+		}
+		return false;
+	}
+
+	function mark(a) {
+		if (a.hasAttribute('data-no-instant')) {
+			return;
+		}
+		if (optedOutByAncestor(a) || hit(a)) {
+			a.setAttribute('data-no-instant', '');
+		}
+	}
 
 	function guard(root) {
+		if (!root || !root.querySelectorAll) {
+			return;
+		}
 		var anchors = root.querySelectorAll('a[href]');
 		for (var i = 0; i < anchors.length; i++) {
-			var a = anchors[i];
-			if (a.hasAttribute('data-no-instant')) continue;
-			var href = a.getAttribute('href') || '';
-			if (href.charAt(0) === '#') continue;
-			for (var j = 0; j < list.length; j++) {
-				if (href.indexOf(list[j]) !== -1) {
-					a.setAttribute('data-no-instant', '');
-					break;
-				}
-			}
+			mark(anchors[i]);
 		}
 	}
 
 	function run() {
 		guard(document);
-		// 动态插入的链接（评论翻页、无限滚动等）兜底监听
-		if (typeof MutationObserver !== 'undefined') {
-			var mo = new MutationObserver(function (muts) {
-				for (var k = 0; k < muts.length; k++) {
-					var nodes = muts[k].addedNodes;
-					for (var n = 0; n < nodes.length; n++) {
-						var node = nodes[n];
-						if (node.nodeType === 1) {
-							if (node.tagName === 'A') guard(node.parentNode || document);
-							else if (node.querySelectorAll) guard(node);
-						}
+
+		if (!list.length || typeof MutationObserver === 'undefined') {
+			return;
+		}
+
+		// 动态插入的链接（评论翻页、无限滚动等）兜底监听：
+		// 只扫描新增节点自身，避免每次变更都全文档重扫。
+		var mo = new MutationObserver(function (muts) {
+			for (var k = 0; k < muts.length; k++) {
+				var nodes = muts[k].addedNodes;
+				for (var n = 0; n < nodes.length; n++) {
+					var node = nodes[n];
+					if (!node || node.nodeType !== 1) {
+						continue;
+					}
+					if (node.tagName === 'A') {
+						mark(node);
+					} else if (node.querySelectorAll) {
+						guard(node);
 					}
 				}
-			});
-			mo.observe(document.documentElement, { childList: true, subtree: true });
-		}
+			}
+		});
+		mo.observe(document.documentElement, { childList: true, subtree: true });
 	}
 
 	if (document.readyState === 'loading') {

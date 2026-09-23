@@ -69,7 +69,7 @@ require $blogpath . 'zb_system/admin/admin_top.php';
 
 		<div class="ps-head">
 			<h1>页面加速</h1>
-			<p>链接悬停预加载、图片懒加载、DNS 预取。纯前端优化，不改动系统任何业务流程。</p>
+			<p>链接悬停预加载、图片懒加载、DNS 预取。纯前端输出层优化，不注册系统业务流程相关的 Hook。</p>
 		</div>
 
 		<form method="post" action="main.php">
@@ -77,7 +77,7 @@ require $blogpath . 'zb_system/admin/admin_top.php';
 			<input type="hidden" name="csrfToken" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
 
 			<div class="ps-card">
-				<div class="ps-card-title">链接预加载 <span class="ps-sub">instant.page：鼠标悬停 / 触摸按下时提前加载目标页，点击几乎零等待</span></div>
+				<div class="ps-card-title">链接预加载 <span class="ps-sub">instant.page：鼠标悬停 / 触摸按下时提前加载目标页，减少点击后的等待</span></div>
 				<div class="ps-row">
 					<label class="ps-switch">
 						<input type="checkbox" name="preload_enabled" value="1"<?php echo $cfg['preload_enabled'] ? ' checked' : ''; ?>>
@@ -92,12 +92,12 @@ require $blogpath . 'zb_system/admin/admin_top.php';
 				<div class="ps-row">
 					<label>预加载黑名单</label>
 					<textarea name="blacklist" rows="6" placeholder="每行一个关键字，链接地址含该关键字时不预加载"><?php echo htmlspecialchars($cfg['blacklist'], ENT_QUOTES, 'UTF-8'); ?></textarea>
-					<span class="ps-tip">默认已排除退出登录、后台、购物车、删除等敏感操作链接</span>
+					<span class="ps-tip">默认已排除退出登录、后台、购物车、删除等敏感操作链接；匹配不区分大小写，并对 URL 编码写法（如 log%6Fut）一并拦截</span>
 				</div>
 			</div>
 
 			<div class="ps-card">
-				<div class="ps-card-title">图片懒加载 <span class="ps-sub">进入视口才加载图片与 iframe，首屏更快、流量更省</span></div>
+				<div class="ps-card-title">图片懒加载 <span class="ps-sub">为视口外的图片与 iframe 补 loading="lazy"，由浏览器原生懒加载调度</span></div>
 				<div class="ps-row">
 					<label class="ps-switch">
 						<input type="checkbox" name="lazy_enabled" value="1"<?php echo $cfg['lazy_enabled'] ? ' checked' : ''; ?>>

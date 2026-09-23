@@ -1,8 +1,9 @@
-# at8_pagespeed 1.0.3 — 发布检查清单（RELEASE_CHECKLIST）
+# at8_pagespeed 1.0.4 — 发布检查清单（RELEASE_CHECKLIST）
 
 检查基准：《Z-BlogPHP 插件 AI Agent 开发规范》§29
 实测环境：Z-BlogPHP **1.7.5** / PHP 7.3.4（本地 `php -l`）+ PHP 8.2（测试站 zblog.xmm.fan）/ MySQL
 检查日期：2026-09-23
+版本：1.0.4（`plugin.xml` / `AT8_PAGESPEED_VERSION` / 本文件 三处一致）
 
 ## 1. 元数据与标识
 
@@ -10,7 +11,7 @@
 |---|---|---|
 | 插件 ID | `at8_pagespeed` | ✅ 长期稳定，未随重构改名 |
 | 插件名称 | 页面加速 | ✅ |
-| 版本号 | 1.0.3（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
+| 版本号 | 1.0.4（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
 | 目录 / 文件前缀 | 函数 `at8_pagespeed_*`、CSS `.ps-*`、JS `window.at8Ps*`、配置键 `conf_Name=at8_pagespeed` | ✅ 无通用命名 |
 | `plugin.xml` 必填节点 | id/name/url/note/description/path/include/level/author/source/adapted/version/pubdate/modified/price/**phpver**/advanced | ✅ 齐全 |
 | 作者与官网 | 漫步白月光 / https://www.at8.fun/ | ✅ |
@@ -82,17 +83,104 @@
 
 - 本地：`php -l` 全通过，`node --check` 通过（3 个 JS），`plugin.xml` 可解析，`!important` = 0
 - 测试站（zblog.xmm.fan）：**39 项断言 39 PASS / 0 FAIL**，含 debug 模式下 5 个页面零 `Notice/Warning/Deprecated`
-- 安装回归（1.0.3）：**25 项断言 25 PASS / 0 FAIL**（干净包经官方「应用中心 → 上传应用」链路实装；落地清单与包内清单严格相等；无 `.git` 残留；额外落地文件仅 `cache/`，属运行时缓存）
-- **升级回归（1.0.2 → 1.0.3，官方上传应用链路覆盖安装）**：版本常量与 `plugin.xml` 同步为 1.0.3 ✅ / 配置 7 项全部保留 ✅ / 9 个落地文件与包内清单一致 ✅
-- **前台注入实测（1.0.3）**：`<head>` 注入 `<!-- at8_pagespeed 1.0.3 -->` + `x-dns-prefetch-control` + `link[rel=dns-prefetch]`；`</body>` 前注入 `at8PsLazySkip` / `at8-lazy.js` / `at8PsBlacklist` / `at8-guard.js` / `instantpage.js`（含 `data-instant-intensity="180"`）—— 与代码预期逐项一致
+- 安装回归（1.0.4）：**25 项断言 25 PASS / 0 FAIL**（干净包经官方「应用中心 → 上传应用」链路实装；落地清单与包内清单严格相等；无 `.git` 残留；额外落地文件仅 `cache/`，属运行时缓存）
+- **升级回归（1.0.2 → 1.0.3 → 1.0.4，官方上传应用链路覆盖安装）**：版本常量与 `plugin.xml` 同步 ✅ / 配置 7 项全部保留 ✅ / 9 个落地文件与包内清单一致 ✅
+- **功能回归（1.0.4）**：**39 项断言 39 PASS / 0 FAIL** —— 前台注入、后台不注入、登录页不注入、设置页渲染、CSRF 合法/篡改两组、重复安装幂等、debug 模式 5 页零报错、停用不丢配置（★）、重启用沿用
+- **前台脚本功能级测试（1.0.4，真实浏览器构造 DOM）**：**22 项断言 22 PASS / 0 FAIL** —— 黑名单大小写/URL 编码绕过拦截、正常链接不误伤、容器级与嵌套排除、`data-no-lazy` 不影响预加载、首屏跳过计数、已有 `loading` / `fetchpriority` 不被改写、`display:none` 不处理、iframe 补属性、动态插入兜底
+- **打包结构校验（1.0.4）**：**26 项 26 PASS** —— gzip 魔数、根节点 `version="php"` + `type="plugin"`、`<id>` 等于目录名、`<folder><path>` 与 `<file><path>+<stream>` 结构完整、路径均以 `<id>/` 开头且无 `./`、内容逐字节一致
+- **安全扫描（1.0.4）**：**需人工复核项 0**；22 处规则命中已逐条复核并白名单化（上游库注释链接、缓存写入、附件删除等），BOM 0 处、`!important` 0 处
+- **前台注入实测（1.0.4）**：`<head>` 注入 `<!-- at8_pagespeed 1.0.4 -->` + `x-dns-prefetch-control` + `link[rel=dns-prefetch]`；`</body>` 前注入 `at8PsLazySkip` / `at8-lazy.js` / 内联写 `data-instant-intensity` / `at8PsBlacklist`+`at8PsPreloadDelay` / `at8-guard.js` / `instantpage.js` —— 与代码预期逐项一致
 - **debug 模式实测**：页面内 `Fatal error` / `Parse error` / `Warning` / `Deprecated` / `Notice` / `Uncaught` 关键字**零命中** ✅
 - 界面回归（1.0.2）：**17 项断言 17 PASS / 0 FAIL** —— 设置页已接入官方后台框架，`admin2.css` / `zblogphp.js` 已加载、顶栏 `#topmenu` 与左侧菜单 14 项（含 `nav_at8_pagespeed`）正常渲染、仅 1 个 doctype、无 PHP 告警、保存往返正常
 - 布局对齐实测（1440×900）：`#divMain` 宽 1280 / 起点 x=150 / `max-width:none`、内容容器内距 `20px 24px 60px` / `max-width:1400px` —— 与 `at8_media_library` 设置页逐项一致
 - 回归复现脚本：`audit_pagespeed.py`、`audit_repro_disable.py`、`test_zba_install_clean.py`、`deploy_ps_102.py`、`shot_release_ps.py`（截图）
 
-## 8. 发布物
+## 8. 安装 / 停用 / 卸载 / 升级测试清单
 
-- `at8_pagespeed_1.0.3_20260923.zba`（**25.4 KB，9 文件**；真实插件文件 + `LICENSE`，已剔除 README / CHANGELOG / RELEASE_CHECKLIST / `screenshots` / zbignore / `cache` / `.git`）
+可勾选的验收项。**判定标准**列即通过条件，不满足即为不通过，不允许「大致正常」。
+命令中的 `zbp_config` 记录数用：`SELECT COUNT(*) FROM zbp_config WHERE conf_Name='at8_pagespeed';`
+
+### 8.1 全新安装（干净站点，从未装过）
+
+- [x] **A1** 应用中心上传 `zba` → 安装成功，无报错、无 `ShowError`
+  - 判定：插件目录出现且文件数 = 包内文件数（当前 **9**）
+- [x] **A2** 插件列表启用 → 成功，前台立即生效
+  - 判定：前台源码出现 `<!-- at8_pagespeed <版本> -->` 注释
+- [x] **A3** 配置初始化正确
+  - 判定：`zbp_config` 中 `conf_Name='at8_pagespeed'` 记录数 ≥ 7，且 `ConfigVer` 存在
+- [x] **A4** 默认值符合预期
+  - 判定：预加载开、懒加载开、DNS 预取开、延迟 65ms、跳过首屏 2 张
+- [x] **A5** 后台设置页可正常打开与保存
+  - 判定：HTTP 200，左侧菜单 14 项含 `nav_at8_pagespeed`，保存后 302 回设置页且值落库
+
+### 8.2 重复安装（幂等性）
+
+- [x] **B1** 改动若干配置 → 再次上传安装同一个包
+  - 判定：用户自定义值**不变**（不被默认值覆盖）
+- [x] **B2** 记录数不重复膨胀
+  - 判定：记录数仍为 7，不出现重复键
+
+### 8.3 停用（关键：历史 Bug 点）
+
+- [x] **C1** 停用后配置**完整保留**
+  - 判定：停用前后 `SELECT conf_Key,conf_Value ...` 结果**逐行相同**
+- [x] **C2** 停用后前台不再注入
+  - 判定：前台源码中 `at8_pagespeed` 字样 0 命中
+- [x] **C3** 停用后后台菜单消失
+  - 判定：左侧菜单无 `nav_at8_pagespeed`
+- [x] **C4** 停用过程无报错
+  - 判定：无 `Fatal` / `Warning` / `Notice`
+
+> 说明：1.7.5 `DisablePlugin()` 内部调用 `UninstallPlugin_<id>()`，停用与卸载共用钩子。
+> 因此 **C1 是本插件最重要的回归项**——一旦失败即为用户数据丢失（1.0.0 曾发生，已修复）。
+
+### 8.4 重新启用
+
+- [x] **D1** 启用后配置沿用
+  - 判定：自定义值与停用前一致（如自定义 `preload_delay=180` 仍为 180）
+- [x] **D2** 前台恢复注入且参数正确
+  - 判定：注入片段含 `data-instant-intensity="180"` 等自定义值
+- [x] **D3** 无需重新配置即可工作
+  - 判定：设置页显示值 = 停用前的值
+
+### 8.5 版本升级（覆盖安装，不删目录）
+
+- [x] **E1** 旧版本配置完整继承
+  - 判定：升级前后配置键集合相同、自定义值不变
+- [x] **E2** 新增配置键被补齐
+  - 判定：新版本新增的键出现在库中，且为默认值（不破坏已有值）
+- [x] **E3** 版本标识同步更新
+  - 判定：`include.php` 常量与 `plugin.xml` 的 `<version>` 均为新版本
+- [x] **E4** 落地文件与包内清单严格相等
+  - 判定：目录内文件数 = 包内文件数，无旧版本残留文件
+- [x] **E5** 升级后无 `.git` / `cache` / `screenshots` 等不应出现的目录
+  - 判定：`find` 无命中（`cache/` 为运行时目录属例外，见 8.6）
+- [x] **E6** 实测记录：1.0.2 → 1.0.3 → 1.0.4 均通过
+
+### 8.6 卸载（删除应用）
+
+- [x] **F1** 删除应用后插件目录被移除
+  - 判定：目录不存在
+- [x] **F2** 配置**保留**（有意设计，非残留 Bug）
+  - 判定：`zbp_config` 中仍有 `conf_Name='at8_pagespeed'` 记录，重装后自动沿用
+- [x] **F3** 无残留数据表 / 文件
+  - 判定：不建表；`zb_users/upload/` 等其他目录无本插件写入物
+  - 例外：`zb_users/plugin/at8_pagespeed/cache/` 为运行时缓存，随目录一并删除
+- [x] **F4** 彻底清除配置的手动方式已文档化
+  - 判定：README「生命周期与数据」写明 `DELETE FROM zbp_config WHERE conf_Name='at8_pagespeed';`
+
+### 8.7 自动化回归脚本对照
+
+| 脚本 | 覆盖项 | 当前结果 |
+|---|---|---|
+| `test_zba_install_clean.py` | A1 / A3 / A4 / E1 / E3 / E4 / E5 | 25 PASS / 0 FAIL |
+| `audit_repro_disable.py` | C1 / D1 / D2（数据丢失 Bug 复现与修复验证） | PASS |
+| `audit_pagespeed.py` | A2 / A5 / C2 / C3 / D2 + 安全与权限 | 39 PASS / 0 FAIL |
+| `test_ps_js_units.py` | 前台脚本功能级（黑名单 / 懒加载 / 动态兜底） | 22 PASS / 0 FAIL |
+
+## 9. 发布物
+
+- `at8_pagespeed_1.0.4_20260923.zba`（**28.9 KB，9 文件**：真实插件文件 + `LICENSE`，已剔除 README / CHANGELOG / RELEASE_CHECKLIST / `screenshots` / zbignore / `cache` / `.git`）
   > ⚠️ 打包污染教训：本插件目录内就是 git 工作区，早期打包脚本只按 `zbignore.txt` 排除，
   > 导致 `.git` 整棵树（35 个文件、约 51 KB）被打进分包。现已在 `build_zba.php` 加入
   > 「不依赖 zbignore 的强制排除清单」，并对包内文件做逐文件 MD5 校验（`_verify_zba.py`）。
@@ -100,7 +188,7 @@
   `02-前台页面-加速生效.png`（1600×1000）、`03-前台注入优化代码.png`（1600×485）
 - GitHub：https://github.com/361611074/at8_pagespeed
 
-## 9. Z-Blog 应用中心上架自检（对官方《发布应用》标准逐条）
+## 10. Z-Blog 应用中心上架自检（对官方《发布应用》标准逐条）
 
 依据：https://docs.zblogcn.com/php/dev-publish 与《应用审核拒绝标准》。
 
