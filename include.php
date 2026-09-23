@@ -2,8 +2,9 @@
 /**
  * 页面加速 at8_pagespeed
  *
- * 纯前端输出层优化：只使用官方 Filter_Plugin_Zbp_Header / Filter_Plugin_Zbp_Footer
- * 输出过滤器注入资源，不接管、不修改系统任何业务流程（上传 / 删除 / 发布等一概不碰）。
+ * 纯前端输出层优化：只使用官方 Filter_Plugin_Zbp_MakeTemplatetags（1.7.x 唯一前台注入点，
+ * 引用传递 $tags，追加 $tags['header'] / $tags['footer']）注入资源，
+ * 不接管、不修改系统任何业务流程（上传 / 删除 / 发布等一概不碰）。
  *
  * @author 漫步白月光 https://www.at8.fun/
  */
@@ -12,7 +13,7 @@ if (!defined('ZBP_PATH')) {
     exit('Access denied');
 }
 
-define('AT8_PAGESPEED_VERSION', '1.0.0');
+define('AT8_PAGESPEED_VERSION', '1.0.1');
 
 RegisterPlugin('at8_pagespeed', 'ActivePlugin_at8_pagespeed');
 
@@ -46,16 +47,21 @@ function at8_pagespeed_menu(&$m)
 
 /**
  * 是否前台输出（后台 / 登录页 / 接口请求一律不注入）
+ *
+ * 判定依据均经 1.7.5 源码核实，不做任何 API 猜测：
+ * 1) $zbp->ismanage：c_system_admin.php 第 16 行起对所有后台请求置 true（官方原生标记）；
+ * 2) 请求脚本位于 /zb_system/ 下（登录页、cmd.php、admin/*）时同样不注入。
  */
 function at8_pagespeed_is_frontend()
 {
     global $zbp;
 
-    if (defined('ZBP_IN_ADMIN') && ZBP_IN_ADMIN) {
+    if (isset($zbp->ismanage) && $zbp->ismanage) {
         return false;
     }
-    // c_system_admin.php 在所有后台请求开头置 true，前台请求不会加载该文件
-    if (isset($zbp->ismanage) && $zbp->ismanage) {
+
+    $script = isset($_SERVER['SCRIPT_NAME']) ? str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']) : '';
+    if ($script !== '' && strpos($script, '/zb_system/') !== false) {
         return false;
     }
 
@@ -63,7 +69,25 @@ function at8_pagespeed_is_frontend()
 }
 
 /**
- * 配置读取（带默认值；1.7.5 Config 为属性式读写）
+ * 配置默认值（键 => 默认值，含类型约定）
+ * 同时供配置读取、安装补齐、升级迁移三处复用，避免默认值分散漂移
+ *
+ * @return array
+ */
+function at8_pagespeed_defaults()
+{
+    return array(
+        'preload_enabled' => 1,   // int：instant.page 悬停预加载开关
+        'preload_delay'   => 65,  // int：悬停触发延迟（毫秒，0~2000）
+        'blacklist'       => "logout\nlogin\nwp-admin\nadmin\nadmin_\ncart\ncheckout\npay\norder\ndelete\nremove\nedit\n?t=\nfeed", // string：预加载黑名单关键字（每行一个）
+        'lazy_enabled'    => 1,   // int：图片 / iframe 懒加载开关
+        'lazy_skip'       => 2,   // int：跳过前 N 张图（保 LCP，0~20）
+        'dns_domains'     => '',  // string：附加 DNS 预取域名（每行一个，空 = 仅站点自身）
+    );
+}
+
+/**
+ * 配置读取（带默认值；1.7.5 Config 为属性式读写，$zbp->Config($name) 请求内缓存）
  *
  * @param string $key 配置键
  * @return mixed
@@ -71,18 +95,11 @@ function at8_pagespeed_is_frontend()
 function at8_pagespeed_cfg($key)
 {
     global $zbp;
-    $defaults = array(
-        'preload_enabled' => 1,   // instant.page 悬停预加载
-        'preload_delay'   => 65,  // 悬停触发延迟（毫秒）
-        'blacklist'       => "logout\nlogin\nwp-admin\nadmin\nadmin_\ncart\ncheckout\npay\norder\ndelete\nremove\nedit\n?t=\nfeed",
-        'lazy_enabled'    => 1,   // 图片 / iframe 懒加载
-        'lazy_skip'       => 2,   // 跳过前 N 张图（保 LCP）
-        'dns_domains'     => '',  // 附加 DNS 预取域名（每行一个）
-    );
+    $defaults = at8_pagespeed_defaults();
     $c = $zbp->Config('at8_pagespeed');
     $v = isset($c->{$key}) ? $c->{$key} : null;
     if ($v === null || $v === '') {
-        return $defaults[$key];
+        return isset($defaults[$key]) ? $defaults[$key] : null;
     }
 
     return $v;
@@ -168,26 +185,69 @@ function at8_pagespeed_tags(&$tags)
 }
 
 /**
- * 安装插件：写入默认配置（属性式写，官方用法）
+ * 安装插件：写入默认配置
+ *
+ * 幂等：仅补齐缺失的配置键，不覆盖用户已保存的值（重复安装 / 停用后再启用均安全）。
+ * 1.7.5 配置为属性式读写（$zbp->Config($name) 单参，返回 Config 对象）。
  */
 function InstallPlugin_at8_pagespeed()
 {
     global $zbp;
     $c = $zbp->Config('at8_pagespeed');
-    $c->preload_enabled = at8_pagespeed_cfg('preload_enabled');
-    $c->preload_delay = at8_pagespeed_cfg('preload_delay');
-    $c->blacklist = at8_pagespeed_cfg('blacklist');
-    $c->lazy_enabled = at8_pagespeed_cfg('lazy_enabled');
-    $c->lazy_skip = at8_pagespeed_cfg('lazy_skip');
-    $c->dns_domains = at8_pagespeed_cfg('dns_domains');
+    $defaults = at8_pagespeed_defaults();
+
+    foreach ($defaults as $k => $v) {
+        if (!isset($c->{$k})) {
+            $c->{$k} = $v;
+        }
+    }
+    if (!isset($c->ConfigVer)) {
+        $c->ConfigVer = 1;
+    }
     $zbp->SaveConfig('at8_pagespeed');
 }
 
 /**
- * 卸载插件：仅清理本插件配置，不动任何站点数据
+ * 版本升级：按 ConfigVer 逐级迁移配置
+ * 后续版本若新增/变更配置键，在此追加分支，不做无谓的数据重建
+ */
+function UpdatePlugin_at8_pagespeed()
+{
+    global $zbp;
+    $c = $zbp->Config('at8_pagespeed');
+    $ver = (int) $c->ConfigVer;
+
+    if ($ver < 1) {
+        // v1：补齐默认键（含 1.0.0 未写入 ConfigVer 的场景）
+        foreach (at8_pagespeed_defaults() as $k => $v) {
+            if (!isset($c->{$k})) {
+                $c->{$k} = $v;
+            }
+        }
+        $c->ConfigVer = 1;
+        $zbp->SaveConfig('at8_pagespeed');
+    }
+}
+
+/**
+ * 旧版更新钩子命名兼容（1.7 前）
+ */
+function at8_pagespeed_Updated()
+{
+    UpdatePlugin_at8_pagespeed();
+}
+
+/**
+ * 停用 / 卸载钩子
+ *
+ * 【1.7.5 实机核实，勿改】官方 DisablePlugin() 内部会调用 UninstallPlugin_xxx()——
+ * 也就是「停用插件」同样会进入本函数；真正的「删除应用」由 AppCentre/app_del.php
+ * 直接删除插件目录，反而不触发本函数。
+ * 因此这里绝不能删除配置：一旦删除，用户每次停用都会丢失全部自定义设置（数据丢失）。
+ * 配置行保留为站点级偏好，重新安装后自动沿用；如需彻底清除，手动删除 zbp_config 中
+ * conf_Name = at8_pagespeed 的记录即可。本插件不建表、不写文件，无其他数据需要清理。
  */
 function UninstallPlugin_at8_pagespeed()
 {
-    global $zbp;
-    $zbp->DelConfig('at8_pagespeed');
+    // 有意为空实现，理由见上方说明
 }

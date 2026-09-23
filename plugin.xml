@@ -4,6 +4,13 @@
 	<name>页面加速</name>
 	<url>https://www.at8.fun/</url>
 	<note>页面访问加速：链接悬停预加载、图片懒加载、DNS 预取。纯前端输出层优化，不改动系统任何业务流程。</note>
+	<description>面向页面访问速度的前端输出层优化，三块功能各自独立开关：
+
+1. 链接预加载：内置 instant.page v5.2.0，鼠标悬停 / 触摸按下时提前加载目标页，点击几乎零等待；触发延迟可调，敏感链接（退出登录 / 后台 / 购物车 / 支付 / 删除 / 编辑等）默认跳过，支持后台自定义黑名单；
+2. 图片 / iframe 懒加载：进入视口才加载，可设置跳过首屏前 N 张图以保证首屏大图（LCP）不被拖慢，支持 data-no-lazy 手动排除；
+3. DNS 预取：站点自身域名自动包含，后台可添加第三方资源域名（图床 / 统计 / 字体），非法格式自动过滤。
+
+不建表、不写文件、不接管任何系统业务流程（上传 / 删除 / 发布 / 评论一概不碰），只通过官方 Filter_Plugin_Zbp_MakeTemplatetags 输出过滤器追加前台 head / footer 内容；后台页面、登录页、接口请求自动跳过注入。</description>
 	<path>main.php</path>
 	<include>include.php</include>
 	<level>1</level>
@@ -18,10 +25,12 @@
 		<url>https://www.at8.fun/</url>
 	</source>
 	<adapted>172900</adapted>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 	<pubdate>2026-09-23</pubdate>
 	<modified>2026-09-23</modified>
 	<price>0</price>
+	<!-- 最低 PHP 版本：仅使用 PHP 5.4+ 通用语法与函数，无 PHP 7 专有特性，实测于 PHP 7.3 / 8.2 -->
+	<phpver>5.6</phpver>
 	<advanced>
 		<dependency></dependency>
 		<rewritefunctions></rewritefunctions>

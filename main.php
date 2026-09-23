@@ -41,7 +41,8 @@ if (GetVars('act', 'POST') === 'save') {
     $zbp->SaveConfig('at8_pagespeed');
 
     $zbp->SetHint('good', '配置已保存');
-    Redirect($_SERVER['HTTP_REFERER']);
+    // 固定回本页：不读取 HTTP_REFERER（可被伪造触发站外跳转，且直接访问时该键不存在会告警）
+    Redirect('./main.php');
 }
 
 $cfg = array(
@@ -56,7 +57,7 @@ $cfg = array(
 $csrf = $zbp->GetCSRFToken();
 
 ?><!DOCTYPE html>
-<html lang="<?php echo $zbp->lang['lang']; ?>">
+<html lang="<?php echo htmlspecialchars((string) $zbp->lang['lang'], ENT_QUOTES, 'UTF-8'); ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
