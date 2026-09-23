@@ -81,9 +81,13 @@
 
 - 本地：`php -l` 全通过，`node --check` 通过（3 个 JS），`plugin.xml` 可解析，`!important` = 0
 - 测试站（zblog.xmm.fan）：**39 项断言 39 PASS / 0 FAIL**，含 debug 模式下 5 个页面零 `Notice/Warning/Deprecated`
-- 回归复现脚本：`audit_pagespeed.py`、`audit_repro_disable.py`
+- 安装回归：**23 项断言 23 PASS / 0 FAIL**（干净包经官方「应用中心 → 上传应用」链路实装；落地清单与包内清单严格相等；无 `.git` 残留）
+- 回归复现脚本：`audit_pagespeed.py`、`audit_repro_disable.py`、`test_zba_install_clean.py`
 
 ## 8. 发布物
 
-- `at8_pagespeed_1.0.1_20260923.zba`（64 KB，47 文件；已剔除 README / CHANGELOG / RELEASE_CHECKLIST / zbignore）
+- `at8_pagespeed_1.0.1_20260923.zba`（**25.1 KB，9 文件**；真实插件文件 + `LICENSE`，已剔除 README / CHANGELOG / RELEASE_CHECKLIST / zbignore / `cache` / `.git`）
+  > ⚠️ 打包污染教训：本插件目录内就是 git 工作区，早期打包脚本只按 `zbignore.txt` 排除，
+  > 导致 `.git` 整棵树（35 个文件、约 51 KB）被打进分包。现已在 `build_zba.php` 加入
+  > 「不依赖 zbignore 的强制排除清单」，并对包内文件做逐文件 MD5 校验（`_verify_zba.py`）。
 - GitHub：https://github.com/361611074/at8_pagespeed
