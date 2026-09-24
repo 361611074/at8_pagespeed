@@ -271,8 +271,9 @@ c_system_common CheckHTTPRefererValid()：referer 为空直接 return true      
 
 ## 9. 发布物
 
-- `at8_pagespeed_1.0.7_20260924.zba`（**42.5 KB / 43513 B，10 文件**：插件文件 + `LICENSE` + `README.md`，已剔除 CHANGELOG / RELEASE_CHECKLIST / `screenshots` / zbignore / `cache` / `.git`）
+- `at8_pagespeed_1.0.7_20260924.zba`（**44.2 KB / 45265 B，10 文件**，md5 `1a9bb258bb2193c2487b194f27e17f60`：插件文件 + `LICENSE` + `README.md`，已剔除 CHANGELOG / RELEASE_CHECKLIST / `screenshots` / zbignore / `cache` / `.git`）
   - 校验：`_check_zba_struct.py` **26/26 PASS**、`_verify_final_zba.py` 反向逐字节比对一致 + 排除/保留核验全 PASS
+  - 已发布：GitHub Release **v1.0.7**（commit `4ad9193`，tag `v1.0.7`）已上传该附件，回下载校验 **45265 B / md5 一致 / gzip 魔数 `1f8b`**
   > ⚠️ 打包污染教训：本插件目录内就是 git 工作区，早期打包脚本只按 `zbignore.txt` 排除，
   > 导致 `.git` 整棵树（35 个文件、约 51 KB）被打进分包。现已在 `build_zba.php` 加入
   > 「不依赖 zbignore 的强制排除清单」，并对包内文件做逐文件 MD5 校验（`_verify_zba.py`）。
