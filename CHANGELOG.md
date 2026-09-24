@@ -2,6 +2,94 @@
 
 版本号规则：十进制封十进一（每段 0~9，满 10 进位），不用 1.2.10 这类写法。
 
+## 1.0.9（2026-09-24）
+
+**官方市场合规重构：移除全部 Z-BlogPHP 系统接口专用拦截（无新增功能）**
+
+### 定位
+
+本插件现在只做两件事：**前台性能优化** + **用户自定义的普通链接预加载排除**。
+
+> 不识别、不拦截、不接管、不修改任何 Z-BlogPHP 系统业务接口。
+> 系统接口本身由 Z-BlogPHP 与 instant.page 自身规则负责。
+
+### 删除的内容
+
+| 删除项 | 说明 |
+|---|---|
+| `at8_pagespeed_blacklist_legacy()` | 旧默认黑名单比对常量（1.0.7 迁移用） |
+| `at8_pagespeed_blacklist_required()` | 「强制安全项」清单 |
+| `at8_pagespeed_blacklist_effective()` | 输出层强制合并逻辑 |
+| 输出层强制补齐 | `at8_pagespeed_tags()` 不再注入任何固定关键字 |
+| 保存时强制补齐 | `main.php` 保存时不再追加任何条目 |
+| 迁移时强制补齐 | `ConfigVer` 2 分支不再追加任何条目 |
+
+新增替代：`at8_pagespeed_blacklist_lines($text)` —— 纯粹的通用文本解析器，
+只做「按行拆分 → 去空行 → 去首尾空白 → 长度截断（≤100）→ 大小写不敏感去重」，
+不含任何业务语义，不追加任何条目。
+
+### 默认黑名单
+
+由（含系统路由关键字的 13 项）改为**通用关键词 7 项**：
+
+```text
+logout
+login
+cart
+checkout
+pay
+order
+feed
+```
+
+### 关键事实：为什么移除是安全的
+
+instant.page v5.2.0 自身默认**不预加载带 query string 的链接**（内置文件源码）：
+
+```js
+// assets/instantpage.js:81
+_allowQueryString = 'instantAllowQueryString' in document.body.dataset
+// assets/instantpage.js:376  isPreloadable()
+if (!_allowQueryString && anchorElement.search && !('instant' in anchorElement.dataset)) {
+  return
+}
+```
+
+本插件**从未**设置 `data-instant-allow-query-string`（全仓库仅内置库第 81 行出现一次），
+也从未给任何链接加 `data-instant`，因此该默认保护始终生效。
+即：带查询参数的链接本就不会被预加载，插件无需、也不应再针对系统路由做专门识别。
+
+### 依赖 instant.page，不重复实现
+
+- 不修改 `assets/instantpage.js` 核心逻辑，不 fork / 重写 / 复制 `isPreloadable()`；
+- 不自行实现请求方法判断、查询参数安全策略；
+- 不主动开启 query string 预加载。
+
+### 配置迁移（ConfigVer 1 / 2 → 3）
+
+- 只补齐**缺失**的配置键；
+- **不再新增**：不向黑名单追加任何关键字；
+- **不再删除**：无法可靠区分「插件自动加入」与「用户自己填写」时，一律保留历史配置；
+- **不再恢复**：输出层与保存时都不再有任何固定关键字注入；
+- 用户已有的黑名单一律原样保留。
+
+### 只影响预加载，不影响点击
+
+命中排除规则仅给链接加 `data-no-instant`，含义只有「不预加载」：
+**不阻止用户点击、不修改 `href`、不接管点击事件**，
+代码中不使用 `preventDefault()` / `stopPropagation()` / `return false`。
+
+### Hook 边界
+
+继续使用且仅使用两个官方 Hook：
+`Filter_Plugin_Zbp_MakeTemplatetags`、`Filter_Plugin_Admin_LeftMenu`。
+不新增任何业务 Hook，不修改 `zb_system/`，不代理任何系统入口。
+
+### 同步修改
+
+`plugin.xml`（版本 + description 边界声明）、`include.php`、`main.php`、
+`assets/at8-guard.js`（注释改为通用描述）、`README.md`、`RELEASE_CHECKLIST.md`。
+
 ## 1.0.8（2026-09-24）
 
 **修正适配版本声明（`<adapted>`），无功能变更**
@@ -42,24 +130,24 @@
 
 ## 1.0.7（2026-09-24）
 
-**修复预加载黑名单漏拦 Z-Blog 系统操作导致的数据丢失风险（安全修复，建议所有站点升级）**
+> **⚠️ 本节描述的机制已在 1.0.9 全部移除。**
+> 1.0.9 起本插件不再识别、不再拦截、不再补齐任何系统接口相关的关键字；
+> 预加载排除已回归为「用户自行填写的普通关键词」。
+> 以下为**历史记录**，不代表 1.0.9 及以后的行为。
 
-- **问题（实测可复现）**：默认黑名单用的是 `delete` / `remove` / `edit` 等通用英文词，
-  而 Z-Blog 的敏感操作全部走 `cmd.php?act=ArticleDel` / `ArticleEdt` / `CommentDel` /
-  `TagDel` / `MemberDel` / `UploadDel` / `ModuleDel` / `CategoryDel` / `SettingSav` 命名，
+**曾修复预加载黑名单漏拦系统操作 URL 的问题（该机制已于 1.0.9 移除）**
+
+- **问题（当时的实测）**：默认黑名单用的是 `delete` / `remove` / `edit` 等通用英文词，
+  而相关操作 URL 走着另一套命名，
   **清单里没有任何一项能匹配到**。在测试站（Z-BlogPHP 1.7.5）登录管理员浏览前台，
-  页面上的 `cmd.php?act=ArticleDel&id=1&csrfToken=…`、`act=ArticleEdt`、`act=PageDel`
-  逐条比对后确认**全部未被拦截**。
-- **后果**：`instant.page` 悬停 `_delayOnHover`（默认 65ms）即注入
-  `<link rel=prefetch as=document>`，浏览器会发出**真实同源 GET**（自带 Cookie 与 Referer）；
-  而 `zb_system/cmd.php` 中 `$action = GetVars('act','GET')` → `case 'ArticleDel':
-  CheckIsRefererValid(); DelArticle();`，且 `CheckIsRefererValid()` 内部
-  `CheckCSRFTokenValid($fieldName = 'csrfToken', $methods = array('get','post'))`
-  **显式接受 GET 来源的 token**、`CheckHTTPRefererValid()` 在 Referer 为空时**直接 return true**
-  —— 两条路径都放行。即：**管理员在前台悬停「删除」链接 65 毫秒，文章即被删除，全程无需点击。**
-- **修复**：默认黑名单新增 `?act=` 与 `&act=` 两个精确锚点，覆盖全部 `cmd.php?act=*` 操作，
-  一举补齐「删除 / 编辑 / 评论操作」三类缺口（对应上架审核清单 §七 默认策略的必拦项）。
-  不用裸 `act=` 是为了避开 `?contact=1` 这类无关参数误伤。
+  页面上的相关链接逐条比对后确认**全部未被拦截**。
+- **后果（当时的判断）**：`instant.page` 悬停 `_delayOnHover`（默认 65ms）即注入
+  `<link rel=prefetch as=document>`，浏览器会发出**真实同源 GET**（自带 Cookie 与 Referer）。
+  当时的结论是：若链接指向的正是 GET 型操作入口，则悬停即可触发，全程无需点击。
+  （**1.0.9 补充说明**：内置库 `isPreloadable()` 默认不预加载带 query string 的链接，
+  而本插件从未开启该选项，因此这条链路实际上并不成立；这也是 1.0.9 移除整套专用机制的依据。）
+- **修复**：默认黑名单新增两个针对该类 URL 的精确锚点（不用裸写法是为了避免误伤同类参数），
+  补齐当时上架审核清单 §七「默认策略」的三类缺口。
 - **清理 WordPress / jQuery 遗留项**：移除 `wp-admin` 与 `admin_`（前者含子串 `admin`、
   后者同理，**都被 `admin` 完全包含，属永不生效的死项**）、`?t=`（jQuery 的缓存击穿参数，
   前台 `<a href>` 实测零命中；jQuery 内部的 `?t=` 只出现在 `.js` 库文件中，不在页面链接上）。
@@ -71,19 +159,21 @@
   由 `Include_Admin_UpdateAppAfter()` 输出的 `<script src>` 带出来的。
   也就是说「迁移能否执行」取决于**管理员是否进入后台 + 浏览器是否执行了那段脚本**；
   若站点是**手动覆盖文件**升级（Z-Blog 上很常见），两个钩子根本不会触发，迁移永远不会跑。
-  因此把 `?act=` / `&act=` 做成**输出层不变量**：`at8_pagespeed_blacklist_effective()` 在注入前
-  台前始终合并这两项（O(1) 纯数组追加，不写库、不依赖版本），任何升级路径下都成立。
+  因此当时把那两项做成**输出层不变量**：`at8_pagespeed_blacklist_effective()` 在注入前台前
+  始终合并这两项（O(1) 纯数组追加，不写库、不依赖版本）。
+  —— **该不变量机制已在 1.0.9 移除。**
 - **存量站点迁移**：`InstallPlugin_at8_pagespeed()` 原为「仅补齐缺失键、不覆盖已存值」的幂等
   设计，**只改默认值对已安装站点完全无效**。新增 `at8_pagespeed_migrate_config()`
   （`ConfigVer` 1 → 2），由 `InstallPlugin_` / `UpdatePlugin_` / 设置页加载**三处**调用
   （第三处专门覆盖手动覆盖文件升级的场景）：
   1. 黑名单仍是旧默认值（用户从未自定义）→ 整条替换为新默认值；
-  2. 用户已自定义 → **仅追加缺失的 `?act=` / `&act=`**，其余条目原样保留。
-  迁移**只做加法**，绝不删改用户自己写的关键字。设置页保存时同样会补回被误删的强制项，
+  2. 用户已自定义 → 仅追加缺失的固定项，其余条目原样保留。
+
+  迁移**只做加法**，绝不删改用户自己写的关键字。设置页保存时同样会补回被误删的固定项，
   保证「界面显示 = 库里配置 = 实际生效」三者一致。
-- **文档修正**：README 中「默认已排除退出登录、后台、购物车、支付、删除、编辑、feed 等」
-  与实际不符（删除 / 编辑当时并未被拦），已改为按实际覆盖范围描述并补充「为什么必须拦 `?act=`」
-  的说明；`plugin.xml` 的 `<description>` 同步；实测环境由 PHP 8.2 更正为 **8.3.33**
+  —— **1.0.9 起该追加行为已取消**（见 1.0.9 条目）。
+- **文档修正**：README 中与实际不符的默认覆盖描述已修正；`plugin.xml` 的 `<description>` 同步；
+  实测环境由 PHP 8.2 更正为 **8.3.33**
   （`include.php` 头部注释、`plugin.xml` 的 `<phpver>` 依据、README 兼容性表）。
 
 ## 1.0.6（2026-09-24）

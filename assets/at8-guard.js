@@ -1,15 +1,26 @@
 /**
  * at8_pagespeed · 预加载守卫
  *
- * 1) 给命中黑名单关键字的链接打 data-no-instant 标记，instant.page 见标记即跳过预加载
- *    （退出登录、购物车、支付、删除等敏感操作不被提前请求）；
- *    instant.page v5 的判定依据（内置文件源码）：`if ('noInstant' in anchorElement.dataset) return`。
- * 2) 兜底写入 instant.page v5 的触发延迟（v5 从 document.body 的 data 属性读取）。
+ * 职责（通用，不含任何 Z-BlogPHP 业务语义）：
+ *   1) 读取 window.at8PsBlacklist（用户在后台填写的普通关键词）；
+ *   2) 对页面上的 a[href] 做普通字符串匹配；
+ *   3) 命中后给该链接打 data-no-instant，instant.page 见标记即跳过预加载；
+ *   4) 兜底写入 instant.page v5 的触发延迟（v5 从 document.body 的 data 属性读取）；
+ *   5) 尊重站点自己已写好的 data-no-instant，并支持容器级继承；
+ *   6) 通过 MutationObserver 覆盖动态插入的链接。
+ *
+ * 边界：
+ *   - data-no-instant 只表示「不预加载」，不阻止用户点击，不修改链接的 href，
+ *     不接管点击事件，不使用 preventDefault / stopPropagation / return false。
+ *   - 是否预加载的最终判定由 instant.page 自身规则负责；本脚本只是在此之上
+ *     叠加一层用户自定义的普通关键词排除。
+ *
+ * instant.page v5 的判定依据（内置文件源码）：`if ('noInstant' in anchorElement.dataset) return`。
  *
  * 黑名单匹配采用三重比对，避免因大小写或 URL 编码差异被绕过：
  *   ① 原样 href 转小写；
- *   ② URL 解码后再转小写（拦 log%6Fut / %2Fadmin 之类编码写法）；
- *   ③ 浏览器归一化后的 path + search 转小写（拦相对路径 / 大小写不一致）。
+ *   ② URL 解码后再转小写（可匹配 log%6Fut 之类编码写法）；
+ *   ③ 浏览器归一化后的 path + search 转小写（可匹配相对路径 / 大小写不一致）。
  *
  * 代码风格：按官方《注意事项速查表》建议放弃 var，统一使用 let / const（需 ES6 环境）。
  */

@@ -11,8 +11,11 @@
  * 源码未使用任何 PHP 8.0+ 专有语法。低于 7.4 的环境在安装阶段被拦下，不作兼容承诺。
  *
  * 最低 Z-BlogPHP：1.7.5 Build 3510（plugin.xml 的 <adapted>173510</adapted>，安装门槛）。
- * 依据：依赖 Filter_Plugin_Zbp_MakeTemplatetags 引用传递、$zbp->ismanage、
- * CheckIsRefererValid() 与 Config() 单参属性式读写；1.7.4 及更早版本会被核心拦下。
+ * 依据：前台注入依赖官方 Filter_Plugin_Zbp_MakeTemplatetags（引用传递 $tags），
+ * 后台菜单依赖 Filter_Plugin_Admin_LeftMenu，配置使用 Config() 单参属性式读写。
+ *
+ * 边界：本插件只做前台性能优化与「用户自定义的普通链接预加载排除」，
+ * 不识别、不拦截、不接管、不修改任何 Z-BlogPHP 系统业务接口。
  *
  * @author 漫步白月光 https://www.at8.fun/
  */
@@ -21,7 +24,7 @@ if (!defined('ZBP_PATH')) {
     exit('Access denied');
 }
 
-define('AT8_PAGESPEED_VERSION', '1.0.8');
+define('AT8_PAGESPEED_VERSION', '1.0.9');
 
 RegisterPlugin('at8_pagespeed', 'ActivePlugin_at8_pagespeed');
 
@@ -54,11 +57,11 @@ function at8_pagespeed_menu(&$m)
 }
 
 /**
- * 是否前台输出（后台 / 登录页 / 接口请求一律不注入）
+ * 是否前台输出（后台 / 登录页一律不注入前台优化脚本）
  *
- * 判定依据均经 1.7.5 源码核实，不做任何 API 猜测：
- * 1) $zbp->ismanage：c_system_admin.php 第 16 行起对所有后台请求置 true（官方原生标记）；
- * 2) 请求脚本位于 /zb_system/ 下（登录页、cmd.php、admin/*）时同样不注入。
+ * 这是插件自身「输出范围」的控制，不是对链接或系统接口的识别、拦截或接管：
+ * 1) $zbp->ismanage：后台请求由系统置 true（官方原生标记）；
+ * 2) 请求脚本位于系统后台目录下时同样不注入。
  */
 function at8_pagespeed_is_frontend()
 {
@@ -88,16 +91,11 @@ function at8_pagespeed_defaults()
         'preload_enabled' => 1,   // int：instant.page 悬停预加载开关
         'preload_delay'   => 65,  // int：悬停触发延迟（毫秒，0~2000）
         // string：预加载黑名单关键字（每行一个）。
-        // 必须包含 ?act= / &act= —— Z-Blog 的敏感操作全部走 cmd.php?act=XxxDel / XxxEdt /
-        // XxxSav 命名（ArticleDel、PageDel、CommentDel、TagDel、MemberDel、UploadDel…），
-        // 用 delete / edit 这类通用英文词是匹配不到的。漏拦的后果不是「少拦一条」：
-        // instant.page 悬停 _delayOnHover（默认 65ms）即以 <link rel=prefetch> 发出真实
-        // 同源 GET（自带 Cookie 与 Referer），而 cmd.php 的 ArticleDel 分支正是 GET 触发、
-        // CheckIsRefererValid() 又显式接受 GET 来源的 csrfToken —— 等于悬停即删数据。
-        // 不用裸 act= 是为了避开 ?contact=1 之类无关参数，故拆成 ?act= 与 &act= 两个精确锚点。
-        // 另：wp-admin / admin_ / ?t= 系 WordPress、jQuery 遗留项（前两者被 admin 子串完全
-        // 包含，属永不生效的死项；?t= 在 Z-Blog 前台 <a href> 实测零命中），1.0.7 已移除。
-        'blacklist'       => "logout\nlogin\nadmin\n?act=\n&act=\nfeed\ncart\ncheckout\npay\norder\ndelete\nremove\nedit",
+        // 这是一组**通用**的 URL 关键词，只用于「链接地址包含该关键词时不预加载」，
+        // 不代表、也不针对任何 Z-BlogPHP 系统业务接口。用户可在后台自行增删。
+        // 是否预加载的最终判定由 instant.page 自身规则负责（例如其默认不预加载带
+        // query string 的链接），本插件只是在此之上叠加一层用户自定义的普通关键字排除。
+        'blacklist'       => "logout\nlogin\ncart\ncheckout\npay\norder\nfeed",
         'lazy_enabled'    => 1,   // int：图片 / iframe 懒加载开关
         'lazy_skip'       => 2,   // int：跳过前 N 张图（保 LCP，0~20）
         'dns_domains'     => '',  // string：附加 DNS 预取域名（每行一个，空 = 仅站点自身）
@@ -217,10 +215,9 @@ function at8_pagespeed_tags(&$tags)
         $foot .= '<script>(function(){var b=document.body;if(b){b.setAttribute("data-instant-intensity","'
             . $delay . '");}})();</script>' . "\r\n";
 
-        // 黑名单关键字传给守卫脚本：命中链接打 data-no-instant，预加载自动跳过。
-        // 取 at8_pagespeed_blacklist_effective()：库中配置 + 强制安全项（?act= / &act=），
-        // 不依赖配置是否已迁移、也不怕用户误删，任何升级路径下都能拦住 cmd.php?act=* 敏感操作。
-        $arr = at8_pagespeed_blacklist_effective();
+        // 用户配置的黑名单关键字传给守卫脚本：命中链接打 data-no-instant，预加载自动跳过。
+        // 只是普通字符串关键字匹配，不做任何系统接口识别。
+        $arr = at8_pagespeed_blacklist_lines(at8_pagespeed_cfg('blacklist'));
         // HEX_* 标志：黑名单关键字含 `</script>` / `<!--` 时不会 breakout `<script>` 上下文；
         // JSON_UNESCAPED_UNICODE 保留中文原字符（黑名单为管理员自配，无需过度转义）
         $foot .= '<script>window.at8PsBlacklist=' . json_encode($arr, JSON_UNESCAPED_UNICODE
@@ -234,67 +231,33 @@ function at8_pagespeed_tags(&$tags)
 }
 
 /**
- * 1.0.6 及更早版本的默认黑名单（仅用于迁移比对，勿删）
+ * 把用户配置的黑名单文本解析成关键字数组
  *
- * 缺陷：不含 ?act= / &act=，拦不住 cmd.php?act=ArticleDel / ArticleEdt / CommentDel 等
- * 敏感操作；且 wp-admin / admin_ 被 admin 子串包含、?t= 在 Z-Blog 前台无命中，均为死项。
- */
-function at8_pagespeed_blacklist_legacy()
-{
-    return "logout\nlogin\nwp-admin\nadmin\nadmin_\ncart\ncheckout\npay\norder\ndelete\nremove\nedit\n?t=\nfeed";
-}
-
-/**
- * 1.0.7 起必须存在于黑名单中的安全关键字（存量站点迁移时补齐）
+ * 这是纯粹的通用文本解析，不含任何业务语义：
+ *   只做「按行拆分 → 去空行 → 去首尾空白 → 长度截断 → 大小写不敏感去重」。
+ * 不判断某个关键字是否属于某个系统的接口，也不强制追加任何条目。
  *
+ * @param string $text 黑名单原文（每行一个关键字）
  * @return array
  */
-function at8_pagespeed_blacklist_required()
-{
-    return array('?act=', '&act=');
-}
-
-/**
- * 输出层实际生效的黑名单（= 库中配置 + 强制安全项）
- *
- * 【为什么要在输出层兜底，而不只依赖配置迁移】
- * Z-BlogPHP 核心并没有 UpdatePlugin() 函数（全量核对 1.7.5：仅 InstallPlugin / UninstallPlugin），
- * 升级迁移实际由 c_system_misc.php 的 `misc&type=updatedapp` 路由触发，而该路由是后台页面里
- * 由 <script src> 带出来的 —— 也就是说「迁移能否执行」取决于：管理员是否进入后台、浏览器是否
- * 执行了那段脚本。若站点是**手动覆盖文件**升级（Z-Blog 很常见），两个钩子根本不会触发，迁移
- * 永远不会跑，库里的旧黑名单会一直是漏拦状态。
- *
- * 因此把安全项做成输出层的不变量：无论配置是否迁移、用户是否误删，注入到前台的清单里始终
- * 含有 ?act= / &act=。这一层是 O(1) 的纯数组追加，不写库、不依赖版本，任何升级路径都成立。
- *
- * @return array 去重（不区分大小写）后的关键字数组
- */
-function at8_pagespeed_blacklist_effective()
+function at8_pagespeed_blacklist_lines($text)
 {
     $arr = array();
     $seen = array();
 
-    $bl = at8_pagespeed_cfg('blacklist');
-    if (is_string($bl) && $bl !== '') {
-        foreach (preg_split('/[\r\n]+/', $bl) as $l) {
-            $l = trim($l);
-            if ($l === '' || strlen($l) > 100) {
-                continue;
-            }
-            $k = strtolower($l);
-            if (!isset($seen[$k])) {
-                $seen[$k] = true;
-                $arr[] = $l;
-            }
-        }
+    if (!is_string($text) || $text === '') {
+        return $arr;
     }
 
-    // 强制安全项：缺失则补（已存在时保持用户原有的书写形式，不重复追加）
-    foreach (at8_pagespeed_blacklist_required() as $need) {
-        $k = strtolower($need);
+    foreach (preg_split('/[\r\n]+/', $text) as $l) {
+        $l = trim($l);
+        if ($l === '' || strlen($l) > 100) {
+            continue;
+        }
+        $k = strtolower($l);
         if (!isset($seen[$k])) {
             $seen[$k] = true;
-            $arr[] = $need;
+            $arr[] = $l;
         }
     }
 
@@ -308,12 +271,15 @@ function at8_pagespeed_blacklist_effective()
  *   ① InstallPlugin_at8_pagespeed()  —— 安装 / 停用后再启用
  *   ② UpdatePlugin_at8_pagespeed()   —— 官方升级钩子
  *   ③ main.php（进入设置页时）        —— 手动覆盖文件升级时 ①② 都不会触发，由这里补
+ * （Z-BlogPHP 核心没有 UpdatePlugin() 函数，②实际由后台页面的 `misc&type=updatedapp`
+ *  路由触发，是否执行取决于管理员是否进后台，所以 ③ 是必要的补充路径。）
  *
- * 【核心事实，勿改】Z-BlogPHP 1.7.5 核心**没有** UpdatePlugin() 函数（全量核对仅
- * InstallPlugin / UninstallPlugin），②实际由 c_system_misc.php 的 `misc&type=updatedapp`
- * 路由调用，而该路由是后台页面里 <script src> 带出来的 —— 取决于管理员是否进后台、浏览器是否
- * 执行脚本。所以配置迁移不能作为安全性的唯一依赖：真正的安全不变量放在输出层
- * （at8_pagespeed_blacklist_effective()）。
+ * 【1.0.9 起的迁移原则】
+ *   1. 只补齐缺失的配置键；
+ *   2. 不再向黑名单新增任何关键字；
+ *   3. 不再恢复、不再补齐、不再输出层注入任何系统专用关键字；
+ *   4. 用户已有的黑名单一律原样保留——无法可靠区分「插件自动加入」与「用户自己填写」
+ *      时，宁可保留历史配置，也不做任何猜测性删除。
  *
  * @return void
  */
@@ -336,35 +302,10 @@ function at8_pagespeed_migrate_config()
         $dirty = true;
     }
 
-    if ($ver < 2) {
-        // v2（1.0.7）：补齐预加载黑名单对 Z-Blog 系统操作的拦截项。
-        //
-        // 漏拦 ?act= 会让 instant.page 在悬停 65ms 后以 <link rel=prefetch> 真实命中
-        // cmd.php?act=ArticleDel 这类 GET 型敏感操作，直接造成数据丢失（详见 defaults 注释）。
-        //
-        // 迁移原则：只做加法，绝不删改用户自己写的条目。
-        //   ① 黑名单仍是旧默认值（用户从未自定义）→ 整条替换为新默认值；
-        //   ② 用户已自定义 → 仅追加缺失的必需项，其余原样保留。
-        $current = (string) $c->blacklist;
-        if (trim($current) === trim(at8_pagespeed_blacklist_legacy())) {
-            $defaults = at8_pagespeed_defaults();
-            $c->blacklist = $defaults['blacklist'];
-        } else {
-            $have = array();
-            foreach (preg_split('/[\r\n]+/', $current) as $line) {
-                $have[strtolower(trim($line))] = true;
-            }
-            $append = array();
-            foreach (at8_pagespeed_blacklist_required() as $need) {
-                if (!isset($have[strtolower($need)])) {
-                    $append[] = $need;
-                }
-            }
-            if (!empty($append)) {
-                $c->blacklist = rtrim($current, "\r\n") . "\n" . implode("\n", $append);
-            }
-        }
-        $ver = 2;
+    // v2 → v3：只推进版本号，不动黑名单。
+    // 历史版本曾在此向黑名单追加系统专用关键字，该行为自 1.0.9 起已完全取消。
+    if ($ver < 3) {
+        $ver = 3;
         $dirty = true;
     }
 

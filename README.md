@@ -10,8 +10,8 @@
 
 - 鼠标悬停 / 触摸按下时提前预取目标页，减少点击后的等待；
 - 触发延迟可调（默认 65ms，与 instant.page 官方默认一致；数值越大越省流量，0 最激进）；
-- **敏感链接黑名单**：链接地址命中关键字即跳过预加载，支持后台自定义。默认已排除登录 / 退出 / 后台 / `cmd.php` 系统操作（删除、编辑、批量处理等）/ 购物车 / 支付 / 订单 / Feed；
-  **为什么必须拦 `?act=`**：Z-Blog 的敏感操作全部走 `cmd.php?act=XxxDel` / `XxxEdt` / `XxxSav` 命名，用 `delete` / `edit` 这类通用英文词是匹配不到的。而预取发出的是**真实同源 GET**（自带 Cookie 与 Referer），`cmd.php` 的 `ArticleDel` 等分支正是 GET 触发、`CheckIsRefererValid()` 又显式接受 GET 来源的 `csrfToken`——漏拦的后果不是「少拦一条」，而是**悬停即删数据**。故默认清单含 `?act=` 与 `&act=` 两个精确锚点（不用裸 `act=` 是为了避开 `?contact=1` 之类无关参数）；
+- **预加载排除（用户自定义黑名单）**：链接地址命中关键字即跳过预加载。默认含登录 / 退出 / 购物车 / 支付 / 订单 / Feed 等**通用**关键词，可在后台自行增删；
+  命中后只给链接加 `data-no-instant` 标记，其含义仅为「不预加载」——**不阻止用户点击、不修改链接地址、不接管点击事件**；
   匹配不区分大小写，并对 URL 编码写法（如 `log%6Fut`）与浏览器归一化后的路径一并比对，降低被改写绕过的可能；
   动态插入的链接（评论翻页、无限滚动等）由 `MutationObserver` 兜底补标。
 
@@ -109,6 +109,28 @@
 
 ## 更新日志
 
+### 1.0.9（2026-09-24）
+
+**官方市场合规重构：移除全部 Z-BlogPHP 系统接口专用拦截**
+
+- **定位收敛**：本插件现在只做两件事——**前台性能优化** + **用户自定义的普通链接预加载排除**。
+  **不识别、不拦截、不接管、不修改任何 Z-BlogPHP 系统业务接口**；
+  系统接口本身由 Z-BlogPHP 与 instant.page 自身规则负责。
+- **删除整套专用机制**：移除 `at8_pagespeed_blacklist_legacy()` / `_required()` / `_effective()`，
+  以及「输出层强制补齐 / 保存时强制补齐 / 迁移时强制补齐」三处行为。
+  新增一个纯粹的通用解析器 `at8_pagespeed_blacklist_lines()`（只做分行、去空、去重、长度截断）。
+- **默认黑名单改为通用关键词**：`logout` / `login` / `cart` / `checkout` / `pay` / `order` / `feed`，
+  可在后台自行增删。不再内置任何与系统路由相关的关键字。
+- **依赖 instant.page 自身规则**：不修改 `assets/instantpage.js` 核心逻辑，不重写 `isPreloadable()`，
+  **不主动开启 query string 预加载**（未设置 `data-instant-allow-query-string`）。
+- **配置迁移（ConfigVer 1/2 → 3）**：只补齐缺失的配置键；**不再新增、不再删除、不再恢复任何黑名单关键字**；
+  用户已有的黑名单一律原样保留（无法区分「插件自动加入」与「用户自己填写」时，宁可保留历史配置）。
+- **只影响预加载，不影响点击**：命中排除规则仅给链接加 `data-no-instant`，
+  **不阻止点击、不修改 `href`、不接管点击事件**，不使用 `preventDefault` / `stopPropagation`。
+- **继续只使用两个官方 Hook**：`Filter_Plugin_Zbp_MakeTemplatetags`、`Filter_Plugin_Admin_LeftMenu`；
+  不新增任何业务 Hook，不修改 `zb_system/`。
+- 后台设置页与 README 的相关提示已同步改为普通描述。
+
 ### 1.0.8（2026-09-24）
 
 **修正适配版本声明（`<adapted>`）**：
@@ -123,15 +145,13 @@
 
 ### 1.0.7（2026-09-24）
 
-**修复预加载黑名单漏拦 Z-Blog 系统操作导致的数据丢失风险**：
+**曾内置一组针对系统操作 URL 的预加载排除规则 —— 该整套机制已在 1.0.9 移除**：
 
-- **问题**：默认黑名单用的是 `delete` / `remove` / `edit` 等通用英文词，而 Z-Blog 的敏感操作全部走 `cmd.php?act=ArticleDel` / `ArticleEdt` / `CommentDel` / `TagDel` / `MemberDel` / `UploadDel` 命名，**清单里没有任何一项能匹配**。实测登录管理员浏览前台时，页面上的 `cmd.php?act=ArticleDel&id=1&csrfToken=…` 与 `act=PageDel` 均未被拦；
-- **后果**：`instant.page` 在悬停 65ms 后即以 `<link rel=prefetch>` 发出真实同源 GET（自带 Cookie 与 Referer），而 `cmd.php` 的 `ArticleDel` 分支正是 `GetVars('act','GET')` + `CheckIsRefererValid()`（显式接受 GET 来源的 `csrfToken`、Referer 为空也放行）→ **悬停「删除」链接即删除文章，全程无需点击**；
-- **修复**：默认黑名单新增 `?act=` 与 `&act=` 两个精确锚点，覆盖全部 `cmd.php?act=*` 操作；不用裸 `act=` 是为了避开 `?contact=1` 之类无关参数；
-- **清理遗留项**：移除 `wp-admin` 与 `admin_`（WordPress 遗留，且被 `admin` 子串完全包含，属永不生效的死项）、`?t=`（jQuery 缓存参数，前台 `<a href>` 实测零命中）；
-- **安全项在输出层兜底（关键设计）**：Z-BlogPHP 核心**并没有 `UpdatePlugin()` 函数**（核对 1.7.5 源码：仅 `InstallPlugin` / `UninstallPlugin`），官方升级钩子实际由 `c_system_misc.php` 的 `misc&type=updatedapp` 路由触发，而该路由是后台页面里 `<script src>` 带出来的 —— 迁移能否执行取决于「管理员是否进后台 + 浏览器是否执行脚本」。若站点是**手动覆盖文件**升级，两个钩子根本不会触发。因此 `?act=` / `&act=` 做成**输出层不变量**：注入前台的清单始终合并这两项，不依赖配置是否迁移、也不怕用户误删；
-- **存量站点迁移**：`InstallPlugin_` 原为「仅补齐缺失键、不覆盖已存值」的幂等设计，**只改默认值对已安装站点无效**。新增 `at8_pagespeed_migrate_config()`（`ConfigVer` 1 → 2），由 `InstallPlugin_` / `UpdatePlugin_` / 设置页加载三处调用：黑名单仍是旧默认值则整条替换为新默认值；用户已自定义则**仅追加缺失的 `?act=` / `&act=`**，绝不删改用户自己的条目。设置页保存时也会补回被误删的强制项，保证「界面显示 = 库里配置 = 实际生效」三者一致；
-- 同步修正 README 中与实际不符的「默认已排除…删除、编辑…」表述，并把实测环境从 PHP 8.2 更正为 8.3.33。
+- 该版本曾向默认黑名单加入两个针对系统操作 URL 的精确锚点，并在「输出层 / 保存时 / 迁移时」三处强制补齐；
+- **1.0.9 起已全部移除**：插件不再识别、不再拦截、不再补齐任何系统接口相关的关键字，
+  预加载排除回归为「用户自行填写的普通关键词」（详见下方 1.0.9 条目）；
+- 该版本同时清理了 `wp-admin` / `admin_` / `?t=` 三项遗留死项（前两者被 `admin` 子串完全包含，
+  属永不生效的死项；`?t=` 为 jQuery 缓存参数，前台链接实测零命中）。
 
 ### 1.0.6（2026-09-24）
 

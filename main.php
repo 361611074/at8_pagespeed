@@ -34,17 +34,7 @@ if (GetVars('act', 'POST') === 'save') {
             $clean[] = $l;
         }
     }
-    // 强制安全项补齐：?act= / &act= 漏拦会导致悬停敏感链接即触发删除等操作（数据丢失），
-    // 用户误删时在保存阶段补回，保证「界面显示 = 实际生效」（输出层还会再兜底一次）
-    $have = array();
-    foreach ($clean as $l) {
-        $have[strtolower($l)] = true;
-    }
-    foreach (at8_pagespeed_blacklist_required() as $need) {
-        if (!isset($have[strtolower($need)])) {
-            $clean[] = $need;
-        }
-    }
+    // 原样保存用户填写的关键字：不追加、不删除、不改写任何条目
     $c->blacklist = implode("\n", $clean);
     $c->lazy_enabled = (GetVars('lazy_enabled', 'POST') == '1') ? 1 : 0;
     $c->lazy_skip = max(0, min(20, (int) GetVars('lazy_skip', 'POST')));
@@ -67,8 +57,8 @@ if (GetVars('act', 'POST') === 'save') {
 
 // 进入设置页时顺带把配置升到当前版本：
 // Z-Blog 核心没有 UpdatePlugin()，官方升级钩子靠后台的 misc&type=updatedapp 路由触发，
-// 手动覆盖文件升级的站点不会触发。在这里补一次（幂等、仅脏时写库），
-// 使「界面显示 = 库里配置 = 实际生效」三者一致；输出层另有强制兜底，安全不依赖这一步。
+// 手动覆盖文件升级的站点不会触发。在这里补一次（幂等、仅脏时写库）。
+// 迁移只补齐缺失的配置键，不改动用户已保存的黑名单。
 at8_pagespeed_migrate_config();
 
 $cfg = array(
@@ -118,7 +108,7 @@ require $blogpath . 'zb_system/admin/admin_top.php';
 				<div class="ps-row">
 					<label>预加载黑名单</label>
 					<textarea name="blacklist" rows="6" placeholder="每行一个关键字，链接地址含该关键字时不预加载"><?php echo htmlspecialchars($cfg['blacklist'], ENT_QUOTES, 'UTF-8'); ?></textarea>
-					<span class="ps-tip">默认已排除登录 / 退出 / 后台 / 购物车 / 支付 / 订单 / 删除 / 编辑 / Feed；其中 <code>?act=</code> 与 <code>&amp;act=</code> 用于拦 Z-Blog 的 <code>cmd.php?act=*</code> 系统操作（如 <code>ArticleDel</code>），<strong>请勿删除</strong>——预取会发出真实 GET 请求，漏拦会导致悬停敏感链接即触发该操作。匹配不区分大小写，并对 URL 编码写法（如 log%6Fut）一并拦截</span>
+					<span class="ps-tip">每行一个关键词。链接地址包含该关键词时，不进行 instant.page 预加载。本功能只控制预加载行为，不会阻止链接正常点击。匹配不区分大小写，并对 URL 编码写法（如 <code>log%6Fut</code>）一并匹配。默认值只是一组通用关键词，可自行增删</span>
 				</div>
 			</div>
 
