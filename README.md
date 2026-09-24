@@ -49,7 +49,7 @@
 
 | 项目 | 要求 / 说明 |
 |---|---|
-| Z-BlogPHP | 1.7.x（`plugin.xml` 声明 `<adapted>172900</adapted>`，可拦住 1.6 及更早版本） |
+| Z-BlogPHP | **1.7.5 Build 3510 及以上**（`plugin.xml` 声明 `<adapted>173510</adapted>`，即最低 1.7.5.3510）。该值由核心按 `MAJOR.MINOR.COMMIT` 拼接后与 `$zbp->version` 做整数比较，1.7.4 及更早版本会在安装阶段被拦下 |
 | PHP | **7.4 及以上**（`<phpver>7.4</phpver>`，安装门槛）。全量文件在 7.3.4 通过语法校验、运行时在 8.3.33 实测零报错，且未使用任何 PHP 8.0+ 专有语法；低于 7.4 会在安装阶段被拦下，不作兼容承诺 |
 | 实测环境 | PHP 7.3 / 8.3.33 + Z-BlogPHP 1.7.5 |
 | 数据库 | MySQL / SQLite / PostgreSQL 均可——只用系统配置接口读写，不含任何数据库专有语法 |
@@ -108,6 +108,18 @@
 - 不写任何敏感信息到页面或日志。
 
 ## 更新日志
+
+### 1.0.8（2026-09-24）
+
+**修正适配版本声明（`<adapted>`）**：
+
+- `<adapted>` 由 `172900` 改为 **`173510`**，即最低要求 **Z-BlogPHP 1.7.5 Build 3510**（原值相当于 1.7.2 系列，门槛偏低）；
+- 编码规则（核对 `zb_system/function/c_system_version.php` 源码）：核心 `lib/app.php` 的 `CheckCompatibility()` 做的是
+  `(int)$adapted > (int)$zbp->version` 判定，超过即拒绝安装，所以该值声明的是**最低**版本而非开发所用版本；
+  而 `$zbp->version` 取自 `$GLOBALS['blogversion'] = ZC_VERSION_MAJOR . ZC_VERSION_MINOR . ZC_VERSION_COMMIT`——
+  **BUILD 位不参与拼接**，故 `1.7.5.3510`（MAJOR=1 / MINOR=7 / COMMIT=3510）→ `173510`，
+  测试站 `1.7.5.3540` 实测 `$zbp->version = 173540`；
+- 效果：1.7.4 及更早版本会在安装阶段被核心拦下；1.7.5 Build 3510 及以上正常安装。
 
 ### 1.0.7（2026-09-24）
 

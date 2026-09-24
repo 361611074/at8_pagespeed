@@ -1,9 +1,9 @@
-# at8_pagespeed 1.0.7 — 发布检查清单（RELEASE_CHECKLIST）
+# at8_pagespeed 1.0.8 — 发布检查清单（RELEASE_CHECKLIST）
 
 检查基准：《Z-BlogPHP 插件 AI Agent 开发规范》§29 + `zblog审核.md`（上架审核专项清单）
-实测环境：Z-BlogPHP **1.7.5** / PHP 7.3.4（本地 `php -l`）+ PHP 8.3.33（测试站 zblog.xmm.fan）/ MySQL
+实测环境：Z-BlogPHP **1.7.5**（Build 3540）/ PHP 7.3.4（本地 `php -l`）+ PHP 8.3.33（测试站 zblog.xmm.fan）/ MySQL
 检查日期：2026-09-24
-版本：1.0.7（`plugin.xml` / `AT8_PAGESPEED_VERSION` / 本文件 三处一致）
+版本：1.0.8（`plugin.xml` / `AT8_PAGESPEED_VERSION` / 本文件 三处一致）
 
 ## 1. 元数据与标识
 
@@ -11,7 +11,7 @@
 |---|---|---|
 | 插件 ID | `at8_pagespeed` | ✅ 长期稳定，未随重构改名 |
 | 插件名称 | 页面加速 | ✅ |
-| 版本号 | 1.0.7（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
+| 版本号 | 1.0.8（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
 | 目录 / 文件前缀 | 函数 `at8_pagespeed_*`、CSS `.ps-*`、JS `window.at8Ps*`、配置键 `conf_Name=at8_pagespeed` | ✅ 无通用命名 |
 | `plugin.xml` 必填节点 | id/name/url/note/description/path/include/level/author/source/adapted/version/pubdate/modified/price/**phpver**/advanced | ✅ 齐全 |
 | 作者与官网 | 漫步白月光 / https://www.at8.fun/ | ✅ |
@@ -21,7 +21,7 @@
 
 | 项 | 值 | 依据 |
 |---|---|---|
-| 最低 Z-BlogPHP | 1.7.x | 依赖 `Filter_Plugin_Zbp_MakeTemplatetags`、`CheckIsRefererValid`、`$zbp->ismanage`、`Config()` 单参属性式 |
+| 最低 Z-BlogPHP | **1.7.5 Build 3510**（`plugin.xml` 的 `<adapted>173510</adapted>`） | ① 核心 `lib/app.php` 的 `CheckCompatibility()` 为 `(int)$adapted > (int)$zbp->version` 整数比较，超过即拒装 → 该值声明的是**最低**版本；② `$zbp->version` 取自 `c_system_version.php` 的 `MAJOR . MINOR . COMMIT` 拼接（**BUILD 位不参与**），1.7.5.3510 → `173510`，测试站 1.7.5.3540 实测 `173540`；③ 功能依赖 `Filter_Plugin_Zbp_MakeTemplatetags` 引用传递、`$zbp->ismanage`、`CheckIsRefererValid()`、`Config()` 单参属性式 |
 | 最低 PHP | **7.4**（`plugin.xml` 显式声明；打包脚本读取，不再写死 5.2） | ① 全量文件 PHP **7.3.4** 通过 `php -l`（严于 7.4）；② 运行时 PHP **8.3.33** 实测零报错；③ 无 PHP 8.0+ 专有语法（已全量扫描 `?->` / `match` 表达式 / `str_contains` / `#[Attribute]` / 构造器提升 / 联合类型 / `enum` / `readonly` 均 0 命中） |
 | 数据库 | MySQL / SQLite / PostgreSQL | 不建表、不写库结构，仅用官方配置存取 |
 | 第三方依赖 | 仅内置 instant.page v5.2.0（MIT，本地文件，无 Composer、无 CDN） | §23 |
@@ -169,7 +169,7 @@ c_system_common CheckHTTPRefererValid()：referer 为空直接 return true      
 | 自建表 / 模块命名 `plugin_appID_*` | ✅ N/A（不建表、不建模块） |
 | 站内链接须用绝对地址（`$zbp->host` / bloghost） | ✅ 菜单、资源、API 全部 `$zbp->host` 拼接 |
 | 服务端网络请求用自带 Network | ✅ N/A（无任何出站请求） |
-| 用 `zbignore.txt` 排除打包文件 | ✅ 已排除 README / CHANGELOG / RELEASE_CHECKLIST / screenshots / `cache` / `.git` |
+| 用 `zbignore.txt` 排除打包文件 | ✅ 已排除 CHANGELOG / RELEASE_CHECKLIST / `screenshots` / `cache` / `.git` / `zbignore.txt` 自身；**`README.md`、`LICENSE`、`logo.png` 保留在包内**（另有不依赖 zbignore 的强制排除清单兜底，见 §9） |
 | 不自带 jQuery | ✅ 媒体库用原生 `XMLHttpRequest`；本插件无 JS 框架依赖 |
 | 编辑器通用性 | ✅ N/A（不涉及编辑器） |
 | 主题模板 HTML 在当前文件内闭合 | ✅ N/A（插件；后台页走官方框架 `admin_header/top/footer`） |
@@ -271,9 +271,11 @@ c_system_common CheckHTTPRefererValid()：referer 为空直接 return true      
 
 ## 9. 发布物
 
-- `at8_pagespeed_1.0.7_20260924.zba`（**44.2 KB / 45265 B，10 文件**，md5 `1a9bb258bb2193c2487b194f27e17f60`：插件文件 + `LICENSE` + `README.md`，已剔除 CHANGELOG / RELEASE_CHECKLIST / `screenshots` / zbignore / `cache` / `.git`）
+- `at8_pagespeed_1.0.8_20260924.zba`（**45.3 KB / 46435 B，10 文件**，md5 `8b94e4dff9f9579d1926e2366903b680`）
+  - **包内**：`plugin.xml`、`include.php`、`main.php`、`style.css`、`assets/`（3 个 JS）、`logo.png`、`LICENSE`、`README.md`
+  - **包外**：`CHANGELOG.md`、`RELEASE_CHECKLIST.md`、`screenshots/`、`cache/`、`.git/`、`zbignore.txt`
   - 校验：`_check_zba_struct.py` **26/26 PASS**、`_verify_final_zba.py` 反向逐字节比对一致 + 排除/保留核验全 PASS
-  - 已发布：GitHub Release **v1.0.7**（commit `4ad9193`，tag `v1.0.7`）已上传该附件，回下载校验 **45265 B / md5 一致 / gzip 魔数 `1f8b`**
+  - 已发布：GitHub Release **v1.0.8**（tag `v1.0.8`）上传该附件，回下载校验字节数与 md5 一致
   > ⚠️ 打包污染教训：本插件目录内就是 git 工作区，早期打包脚本只按 `zbignore.txt` 排除，
   > 导致 `.git` 整棵树（35 个文件、约 51 KB）被打进分包。现已在 `build_zba.php` 加入
   > 「不依赖 zbignore 的强制排除清单」，并对包内文件做逐文件 MD5 校验（`_verify_zba.py`）。

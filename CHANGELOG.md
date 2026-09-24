@@ -2,6 +2,44 @@
 
 版本号规则：十进制封十进一（每段 0~9，满 10 进位），不用 1.2.10 这类写法。
 
+## 1.0.8（2026-09-24）
+
+**修正适配版本声明（`<adapted>`），无功能变更**
+
+- `<adapted>` 由 `172900` 改为 **`173510`**，即声明最低支持 **Z-BlogPHP 1.7.5 Build 3510**。
+  原值 `172900` 相当于 1.7.2 系列，门槛明显偏低，与「实际只面向 1.7.5 验证」不符。
+
+- **编码规则（源码实锤）**：核心 `zb_system/function/lib/app.php` 的 `CheckCompatibility()`：
+
+  ```php
+  if ((int) $this->adapted > (int) $zbp->version) {
+      return new Exception(str_replace('%s', $this->adapted, $zbp->lang['error'][78]));
+  }
+  ```
+
+  是**整数比较**，超过即拒绝安装 —— 所以 `<adapted>` 声明的是**最低**版本，不是「开发所用版本」
+  （应用中心后台的字段名即「适配的Z-Blog最低版本」）。
+
+  `$zbp->version` 取值来自 `zb_system/function/c_system_version.php`：
+
+  ```php
+  $GLOBALS['blogversion'] = ZC_VERSION_MAJOR . ZC_VERSION_MINOR . ZC_VERSION_COMMIT;
+  ```
+
+  **注意 `ZC_VERSION_BUILD` 不参与拼接**。以 1.7.5 为例，`MAJOR=1` / `MINOR=7` / `BUILD=5` /
+  `COMMIT=3510`，故 `blogversion = '1' . '7' . '3510' = '173510'`。
+
+  | 版本 | 拼接结果 | `<adapted>` 取值 |
+  |---|---|---|
+  | 1.7.5.3510 | `173510` | **173510（本次采用）** |
+  | 1.7.5.3540（测试站实测） | `173540` | — |
+  | 1.7.2.2900（旧值含义） | `172900` | 旧值 |
+
+- **效果**：1.7.4 及更早版本（`$zbp->version` < `173510`）会在安装阶段被核心拦下并提示版本不满足；
+  1.7.5 Build 3510 及以上正常安装。测试站（1.7.5.3540，`$zbp->version = 173540`）验证 `173510 <= 173540` 成立，安装不受影响。
+
+- 同步更新 `include.php` 头部注释、README「兼容性」表与 `RELEASE_CHECKLIST.md`。
+
 ## 1.0.7（2026-09-24）
 
 **修复预加载黑名单漏拦 Z-Blog 系统操作导致的数据丢失风险（安全修复，建议所有站点升级）**

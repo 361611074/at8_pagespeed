@@ -26,11 +26,17 @@
 		<email>361611074@qq.com</email>
 		<url>https://www.at8.fun/</url>
 	</source>
-	<!-- 适配版本：与系统 $zbp->version 做数值比较（lib/app.php CheckCompatibility()）。
-	     1.7.x 的 $zbp->version = MAJOR.MINOR.COMMIT，如 1.7.5 Build 3540 → 173540；
-	     取 172900 表示面向 1.7 系列，可拦住 1.6 及更早版本。 -->
-	<adapted>172900</adapted>
-	<version>1.0.7</version>
+	<!-- 适配版本（应用中心显示为「适配的Z-Blog最低版本」）：
+	     核心 lib/app.php CheckCompatibility() 做的是 (int)$adapted > (int)$zbp->version 判定，
+	     超过即拒绝安装，因此本值 = 声明支持的**最低** Z-BlogPHP 版本，而非「开发所用版本」。
+	     $zbp->version 的取值来自 zb_system/function/c_system_version.php：
+	         $GLOBALS['blogversion'] = ZC_VERSION_MAJOR . ZC_VERSION_MINOR . ZC_VERSION_COMMIT;
+	     注意 BUILD 位不参与拼接（1.7.5 的 BUILD='5' 被丢弃），故
+	         1.7.5.3510（MAJOR=1, MINOR=7, COMMIT=3510） → 173510
+	         1.7.5.3540 → 173540（测试站实测值）
+	     取 173510 表示最低要求 Z-BlogPHP 1.7.5 Build 3510，可拦住 1.7.4 及更早版本。 -->
+	<adapted>173510</adapted>
+	<version>1.0.8</version>
 	<pubdate>2026-09-23</pubdate>
 	<modified>2026-09-24</modified>
 	<price>0</price>

@@ -10,6 +10,10 @@
  * 依据：全量文件在 PHP 7.3.4 通过 php -l（严于 7.4）；运行时在 PHP 8.3.33 实测零报错；
  * 源码未使用任何 PHP 8.0+ 专有语法。低于 7.4 的环境在安装阶段被拦下，不作兼容承诺。
  *
+ * 最低 Z-BlogPHP：1.7.5 Build 3510（plugin.xml 的 <adapted>173510</adapted>，安装门槛）。
+ * 依据：依赖 Filter_Plugin_Zbp_MakeTemplatetags 引用传递、$zbp->ismanage、
+ * CheckIsRefererValid() 与 Config() 单参属性式读写；1.7.4 及更早版本会被核心拦下。
+ *
  * @author 漫步白月光 https://www.at8.fun/
  */
 
@@ -17,7 +21,7 @@ if (!defined('ZBP_PATH')) {
     exit('Access denied');
 }
 
-define('AT8_PAGESPEED_VERSION', '1.0.7');
+define('AT8_PAGESPEED_VERSION', '1.0.8');
 
 RegisterPlugin('at8_pagespeed', 'ActivePlugin_at8_pagespeed');
 
