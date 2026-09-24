@@ -17,7 +17,7 @@ if (!defined('ZBP_PATH')) {
     exit('Access denied');
 }
 
-define('AT8_PAGESPEED_VERSION', '1.0.5');
+define('AT8_PAGESPEED_VERSION', '1.0.6');
 
 RegisterPlugin('at8_pagespeed', 'ActivePlugin_at8_pagespeed');
 
@@ -214,7 +214,10 @@ function at8_pagespeed_tags(&$tags)
                 }
             }
         }
-        $foot .= '<script>window.at8PsBlacklist=' . json_encode($arr, JSON_UNESCAPED_UNICODE)
+        // HEX_* 标志：黑名单关键字含 `</script>` / `<!--` 时不会 breakout `<script>` 上下文；
+        // JSON_UNESCAPED_UNICODE 保留中文原字符（黑名单为管理员自配，无需过度转义）
+        $foot .= '<script>window.at8PsBlacklist=' . json_encode($arr, JSON_UNESCAPED_UNICODE
+            | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)
             . ';window.at8PsPreloadDelay=' . $delay . ';</script>' . "\r\n";
         $foot .= '<script src="' . $base . 'at8-guard.js?v=' . $v . '" defer></script>' . "\r\n";
         $foot .= '<script src="' . $base . 'instantpage.js?v=' . $v . '" defer></script>' . "\r\n";

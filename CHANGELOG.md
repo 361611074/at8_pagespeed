@@ -2,6 +2,15 @@
 
 版本号规则：十进制封十进一（每段 0~9，满 10 进位），不用 1.2.10 这类写法。
 
+## 1.0.6（2026-09-24）
+
+规范符合性微调（无功能变更）：
+
+- **JS 注入安全加固**：黑名单关键字通过 `json_encode` 内联到 `<script>` 时补 `JSON_HEX_TAG` / `JSON_HEX_AMP` / `JSON_HEX_APOS` / `JSON_HEX_QUOT` 四个 HEX 标志，防管理员配置中含 `</script>` / `<!--` / `"` 等字符时 breakout `<script>` 上下文。功能不变，HTTP 响应中（`Content-Type: application/json`）不受影响。
+- **宣传文案去绝对化**：`plugin.xml` 的 `<description>` 中原"减少点击后的等待""以保证首屏大图（LCP）不被拖慢"改为"可能减少点击后的等待""以减小对首屏大图（LCP）渲染时机的影响"，并补充"实际效果取决于浏览器、主题与页面结构，本插件不承诺固定的提速数值"。
+- `zbignore.txt` 调整：`README.md` 不再排除（上架审核对使用说明有要求，README 进 zba 包便于审核员查阅）；`CHANGELOG.md` / `RELEASE_CHECKLIST.md` / `screenshots` / `cache` / `.git` 仍按原状排除。
+- 同步更新 `include.php` / `plugin.xml` / `README.md` / `RELEASE_CHECKLIST.md` 的版本号。
+
 ## 1.0.5（2026-09-23）
 
 - **最低 PHP 版本提高至 7.4**（`plugin.xml` 的 `<phpver>`，应用中心据此拒绝安装）。

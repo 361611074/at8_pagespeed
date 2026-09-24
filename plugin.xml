@@ -6,11 +6,13 @@
 	<note>页面访问加速：链接悬停预加载、图片懒加载、DNS 预取。纯前端输出层优化，不注册系统业务流程相关的 Hook。</note>
 	<description>面向页面访问速度的前端输出层优化，三块功能各自独立开关：
 
-1. 链接预加载：内置 instant.page v5.2.0，鼠标悬停 / 触摸按下时提前加载目标页，减少点击后的等待；触发延迟可调，敏感链接（退出登录 / 后台 / 购物车 / 支付 / 删除 / 编辑等）默认跳过，支持后台自定义黑名单；
-2. 图片 / iframe 懒加载：为视口外的图片与 iframe 补 loading="lazy"，由浏览器原生懒加载调度；可设置跳过首屏前 N 张图以保证首屏大图（LCP）不被拖慢，支持 data-no-lazy 手动排除；
+1. 链接预加载：内置 instant.page v5.2.0，鼠标悬停 / 触摸按下时提前加载目标页，可能减少点击后的等待；触发延迟可调，敏感链接（退出登录 / 后台 / 购物车 / 支付 / 删除 / 编辑等）默认跳过，支持后台自定义黑名单；
+2. 图片 / iframe 懒加载：为视口外的图片与 iframe 补 loading="lazy"，由浏览器原生懒加载调度；可设置跳过首屏前 N 张图，以减小对首屏大图（LCP）渲染时机的影响；支持 data-no-lazy 手动排除；
 3. DNS 预取：站点自身域名自动包含，后台可添加第三方资源域名（图床 / 统计 / 字体），非法格式自动过滤。
 
-只通过官方 Filter_Plugin_Zbp_MakeTemplatetags 输出过滤器追加前台 head / footer 内容；不建表、不写文件、不注册上传 / 删除 / 发布 / 评论等业务流程相关的 Hook；后台页面、登录页、接口请求自动跳过注入。</description>
+只通过官方 Filter_Plugin_Zbp_MakeTemplatetags 输出过滤器追加前台 head / footer 内容；不建表、不写文件、不注册上传 / 删除 / 发布 / 评论等业务流程相关的 Hook；后台页面、登录页、接口请求自动跳过注入。
+
+实际效果取决于浏览器、主题与页面结构，本插件不承诺固定的提速数值。</description>
 	<path>main.php</path>
 	<include>include.php</include>
 	<level>1</level>
@@ -28,9 +30,9 @@
 	     1.7.x 的 $zbp->version = MAJOR.MINOR.COMMIT，如 1.7.5 Build 3540 → 173540；
 	     取 172900 表示面向 1.7 系列，可拦住 1.6 及更早版本。 -->
 	<adapted>172900</adapted>
-	<version>1.0.5</version>
+	<version>1.0.6</version>
 	<pubdate>2026-09-23</pubdate>
-	<modified>2026-09-23</modified>
+	<modified>2026-09-24</modified>
 	<price>0</price>
 	<!-- 最低 PHP 版本（安装门槛，lib/app.php 据此拒绝安装）：7.4
 	     依据：① 全量文件在 PHP 7.3.4 通过 php -l（7.3.4 严于 7.4，向下兼容已覆盖）；
