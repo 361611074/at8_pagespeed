@@ -1,9 +1,9 @@
-# at8_pagespeed 1.0.6 — 发布检查清单（RELEASE_CHECKLIST）
+# at8_pagespeed 1.0.7 — 发布检查清单（RELEASE_CHECKLIST）
 
-检查基准：《Z-BlogPHP 插件 AI Agent 开发规范》§29
-实测环境：Z-BlogPHP **1.7.5** / PHP 7.3.4（本地 `php -l`）+ PHP 8.2（测试站 zblog.xmm.fan）/ MySQL
+检查基准：《Z-BlogPHP 插件 AI Agent 开发规范》§29 + `zblog审核.md`（上架审核专项清单）
+实测环境：Z-BlogPHP **1.7.5** / PHP 7.3.4（本地 `php -l`）+ PHP 8.3.33（测试站 zblog.xmm.fan）/ MySQL
 检查日期：2026-09-24
-版本：1.0.6（`plugin.xml` / `AT8_PAGESPEED_VERSION` / 本文件 三处一致）
+版本：1.0.7（`plugin.xml` / `AT8_PAGESPEED_VERSION` / 本文件 三处一致）
 
 ## 1. 元数据与标识
 
@@ -11,7 +11,7 @@
 |---|---|---|
 | 插件 ID | `at8_pagespeed` | ✅ 长期稳定，未随重构改名 |
 | 插件名称 | 页面加速 | ✅ |
-| 版本号 | 1.0.6（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
+| 版本号 | 1.0.7（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
 | 目录 / 文件前缀 | 函数 `at8_pagespeed_*`、CSS `.ps-*`、JS `window.at8Ps*`、配置键 `conf_Name=at8_pagespeed` | ✅ 无通用命名 |
 | `plugin.xml` 必填节点 | id/name/url/note/description/path/include/level/author/source/adapted/version/pubdate/modified/price/**phpver**/advanced | ✅ 齐全 |
 | 作者与官网 | 漫步白月光 / https://www.at8.fun/ | ✅ |
@@ -22,7 +22,7 @@
 | 项 | 值 | 依据 |
 |---|---|---|
 | 最低 Z-BlogPHP | 1.7.x | 依赖 `Filter_Plugin_Zbp_MakeTemplatetags`、`CheckIsRefererValid`、`$zbp->ismanage`、`Config()` 单参属性式 |
-| 最低 PHP | **7.4**（`plugin.xml` 显式声明；打包脚本读取，不再写死 5.2） | ① 全量文件 PHP **7.3.4** 通过 `php -l`（严于 7.4）；② 运行时 PHP **8.2** 实测零报错；③ 无 PHP 8.0+ 专有语法（已全量扫描 `?->` / `match` 表达式 / `str_contains` / `#[Attribute]` / 构造器提升 / 联合类型 / `enum` / `readonly` 均 0 命中） |
+| 最低 PHP | **7.4**（`plugin.xml` 显式声明；打包脚本读取，不再写死 5.2） | ① 全量文件 PHP **7.3.4** 通过 `php -l`（严于 7.4）；② 运行时 PHP **8.3.33** 实测零报错；③ 无 PHP 8.0+ 专有语法（已全量扫描 `?->` / `match` 表达式 / `str_contains` / `#[Attribute]` / 构造器提升 / 联合类型 / `enum` / `readonly` 均 0 命中） |
 | 数据库 | MySQL / SQLite / PostgreSQL | 不建表、不写库结构，仅用官方配置存取 |
 | 第三方依赖 | 仅内置 instant.page v5.2.0（MIT，本地文件，无 Composer、无 CDN） | §23 |
 
@@ -41,12 +41,12 @@
 
 | 阶段 | 检查内容 | 结果 |
 |---|---|---|
-| 安装 | 幂等：仅补齐缺失配置键，不覆盖用户已保存值 | ✅ 重复安装后自定义值保留，`ConfigVer` 写入 |
+| 安装 | 幂等：仅补齐缺失配置键，不覆盖用户已保存值；随后 `at8_pagespeed_migrate_config()` 把 `ConfigVer` 升到当前版本 | ✅ 重复安装后自定义值保留，`ConfigVer` 写入 |
 | 启用 | 仅注册输出过滤器 + 后台菜单，无其他副作用 | ✅ |
 | 正常运行 | 前台注入（header 预取 / footer 脚本）；后台、登录页、接口不注入 | ✅ 39 项断言全过 |
 | 停用 | **不丢配置**（1.7.5 停用会触发 `UninstallPlugin` 钩子） | ✅ Bug 已复现并修复，见下 |
 | 重新启用 | 配置沿用，前台立即恢复注入 | ✅ delay=180 + 黑名单全部保留 |
-| 升级 | `UpdatePlugin_at8_pagespeed()` 按 `ConfigVer` 逐级迁移 | ✅ 入口就位（后续加键时追加分支） |
+| 升级 | `at8_pagespeed_migrate_config()` 按 `ConfigVer` 逐级迁移；由 `InstallPlugin_` / `UpdatePlugin_` / 设置页加载**三处**调用（覆盖手动覆盖文件升级） | ✅ 1 → 2 分支就位（补 `?act=` / `&act=`，只做加法） |
 | 卸载 | 本插件不建表不写文件；配置保留为站点级偏好 | ✅ 已在代码注释说明取舍理由 |
 
 ### 本次修复的数据丢失问题（已复现 + 已修复）
@@ -58,6 +58,49 @@
 [复现] 1.0.0 include.php：停用前 delay=180、配置行 7 → 停用后 delay=''、配置行 0
 [修复] 1.0.1 include.php：停用前 delay=180 → 停用后 delay=180、配置行 7 → 重启用后仍 180、前台生效
 ```
+
+### 本次修复的预加载黑名单漏拦（1.0.7，对应上架审核清单 §七「默认策略」）
+
+§七 要求 `登录 / 退出 / 后台 / 删除 / 编辑 / 支付 / 购物车 / 订单 / 评论操作 / Feed` **不得被预加载**。
+原默认黑名单（14 项，自 1.0.0 未变）实测只满足 **7 / 10**：
+
+```
+[漏拦] cmd.php?act=ArticleDel&id=1&csrfToken=…   ← 删除
+[漏拦] cmd.php?act=ArticleEdt&id=1               ← 编辑
+[漏拦] cmd.php?act=CommentDel&id=1               ← 评论操作
+```
+
+根因：清单里是 `delete` / `remove` / `edit` 等通用英文词，而 Z-Blog 敏感操作全部走
+`cmd.php?act=XxxDel` / `XxxEdt` / `XxxSav` 命名，**清单中没有任何一项能匹配**。
+
+数据丢失链路（逐环源码取证，非推测）：
+
+```
+instantpage.js  _delayOnHover=65 + mouseover → setTimeout(65ms)      悬停 65ms 即预取，无需点击
+instantpage.js  preloadUsingLinkElement() → <link rel=prefetch as=document>
+浏览器          发出真实同源 GET（自带 Cookie 与 Referer）
+cmd.php         $action = GetVars('act','GET') → case 'ArticleDel': CheckIsRefererValid(); DelArticle();
+c_system_common CheckCSRFTokenValid($field='csrfToken', $methods=array('get','post'))  显式接受 GET 的 token
+c_system_common CheckHTTPRefererValid()：referer 为空直接 return true                 无 Referer 也放行
+```
+
+修复：
+
+```
+[修复] 1.0.7 defaults：新增 ?act= / &act=，移除 wp-admin / admin_ / ?t=（14 项 → 13 项）
+[修复] 1.0.7 输出层不变量：at8_pagespeed_blacklist_effective() 注入前始终合并 ?act= / &act=
+[修复] 1.0.7 migrate：ConfigVer 1 → 2，等值旧默认则整条替换，已自定义则仅追加缺失项
+        调用点三处：InstallPlugin_ / UpdatePlugin_ / main.php（设置页加载）
+[实测] 测试站登录管理员抓前台 <a href>：ArticleEdt / ArticleDel / PageEdt / PageDel 全部由 ❌ 未拦 → ✅ 已拦
+```
+
+> **为什么必须有「输出层不变量」这一层**：Z-BlogPHP 核心并没有 `UpdatePlugin()` 函数
+> （核对 1.7.5 源码，`c_system_plugin.php` 仅 `InstallPlugin` / `UninstallPlugin`）。
+> 官方升级钩子实际由 `c_system_misc.php` 的 `misc&type=updatedapp` 路由触发，而该路由是后台
+> 页面里 `<script src>` 带出来的 —— 迁移能否执行取决于「管理员进后台 + 浏览器执行脚本」。
+> **手动覆盖文件升级时两个钩子都不会触发**，配置迁移不会跑。因此安全项不能只依赖配置迁移。
+> 实测记录：本轮部署时 AppCentre 上传后立即查库，`ConfigVer` 仍为 1、黑名单仍是旧值
+> —— 正是这条链路依赖的实证；补上输出层兜底后，不迁移的站点前台依然被正确拦截。
 
 ## 5. 安全
 
@@ -200,7 +243,7 @@
   - 判定：目录内文件数 = 包内文件数，无旧版本残留文件
 - [x] **E5** 升级后无 `.git` / `cache` / `screenshots` 等不应出现的目录
   - 判定：`find` 无命中（`cache/` 为运行时目录属例外，见 8.6）
-- [x] **E6** 实测记录：1.0.2 → 1.0.3 → 1.0.4 → 1.0.5 均通过（1.0.6 仅调整 JS 注入转义标志与文档表述，未变更生命周期逻辑，沿用 1.0.5 结论）
+- [x] **E6** 实测记录：1.0.2 → 1.0.3 → 1.0.4 → 1.0.5 均通过（1.0.6 仅调整 JS 注入转义标志与文档表述，未变更生命周期逻辑，沿用 1.0.5 结论）；**1.0.7 新增 `ConfigVer` 1 → 2 迁移分支，已在测试站覆盖安装实测**（见 8.5 之 1.0.7 小节）
 
 ### 8.6 卸载（删除应用）
 
@@ -228,12 +271,13 @@
 
 ## 9. 发布物
 
-- `at8_pagespeed_1.0.4_20260923.zba`（**28.9 KB，9 文件**：真实插件文件 + `LICENSE`，已剔除 README / CHANGELOG / RELEASE_CHECKLIST / `screenshots` / zbignore / `cache` / `.git`）
+- `at8_pagespeed_1.0.7_20260924.zba`（**42.5 KB / 43513 B，10 文件**：插件文件 + `LICENSE` + `README.md`，已剔除 CHANGELOG / RELEASE_CHECKLIST / `screenshots` / zbignore / `cache` / `.git`）
+  - 校验：`_check_zba_struct.py` **26/26 PASS**、`_verify_final_zba.py` 反向逐字节比对一致 + 排除/保留核验全 PASS
   > ⚠️ 打包污染教训：本插件目录内就是 git 工作区，早期打包脚本只按 `zbignore.txt` 排除，
   > 导致 `.git` 整棵树（35 个文件、约 51 KB）被打进分包。现已在 `build_zba.php` 加入
   > 「不依赖 zbignore 的强制排除清单」，并对包内文件做逐文件 MD5 校验（`_verify_zba.py`）。
 - 上架截图 `screenshots/`（不进分包，仅供应用中心上传）：`01-后台设置页.png`（1600×1310）、
-  `02-前台页面-加速生效.png`（1600×1000）、`03-前台注入优化代码.png`（1600×485）
+  `02-前台页面-加速生效.png`（1600×1000）、`03-前台注入优化代码.png`（1600×542）
 - GitHub：https://github.com/361611074/at8_pagespeed
 
 ## 10. Z-Blog 应用中心上架自检（对官方《发布应用》标准逐条）

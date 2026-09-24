@@ -2,6 +2,52 @@
 
 版本号规则：十进制封十进一（每段 0~9，满 10 进位），不用 1.2.10 这类写法。
 
+## 1.0.7（2026-09-24）
+
+**修复预加载黑名单漏拦 Z-Blog 系统操作导致的数据丢失风险（安全修复，建议所有站点升级）**
+
+- **问题（实测可复现）**：默认黑名单用的是 `delete` / `remove` / `edit` 等通用英文词，
+  而 Z-Blog 的敏感操作全部走 `cmd.php?act=ArticleDel` / `ArticleEdt` / `CommentDel` /
+  `TagDel` / `MemberDel` / `UploadDel` / `ModuleDel` / `CategoryDel` / `SettingSav` 命名，
+  **清单里没有任何一项能匹配到**。在测试站（Z-BlogPHP 1.7.5）登录管理员浏览前台，
+  页面上的 `cmd.php?act=ArticleDel&id=1&csrfToken=…`、`act=ArticleEdt`、`act=PageDel`
+  逐条比对后确认**全部未被拦截**。
+- **后果**：`instant.page` 悬停 `_delayOnHover`（默认 65ms）即注入
+  `<link rel=prefetch as=document>`，浏览器会发出**真实同源 GET**（自带 Cookie 与 Referer）；
+  而 `zb_system/cmd.php` 中 `$action = GetVars('act','GET')` → `case 'ArticleDel':
+  CheckIsRefererValid(); DelArticle();`，且 `CheckIsRefererValid()` 内部
+  `CheckCSRFTokenValid($fieldName = 'csrfToken', $methods = array('get','post'))`
+  **显式接受 GET 来源的 token**、`CheckHTTPRefererValid()` 在 Referer 为空时**直接 return true**
+  —— 两条路径都放行。即：**管理员在前台悬停「删除」链接 65 毫秒，文章即被删除，全程无需点击。**
+- **修复**：默认黑名单新增 `?act=` 与 `&act=` 两个精确锚点，覆盖全部 `cmd.php?act=*` 操作，
+  一举补齐「删除 / 编辑 / 评论操作」三类缺口（对应上架审核清单 §七 默认策略的必拦项）。
+  不用裸 `act=` 是为了避开 `?contact=1` 这类无关参数误伤。
+- **清理 WordPress / jQuery 遗留项**：移除 `wp-admin` 与 `admin_`（前者含子串 `admin`、
+  后者同理，**都被 `admin` 完全包含，属永不生效的死项**）、`?t=`（jQuery 的缓存击穿参数，
+  前台 `<a href>` 实测零命中；jQuery 内部的 `?t=` 只出现在 `.js` 库文件中，不在页面链接上）。
+  默认清单由 14 项变为 13 项。
+- **安全项在输出层兜底（关键设计）**：Z-BlogPHP 核心**并没有 `UpdatePlugin()` 函数**——
+  核对 1.7.5 全量源码，`zb_system/function/c_system_plugin.php` 里只有 `InstallPlugin()` 与
+  `UninstallPlugin()`；官方文档所说的「更新插件时执行」实际由 `c_system_misc.php` 的
+  `misc&type=updatedapp` 路由调用（`$fn = 'UpdatePlugin_' . $appid`），而该路由是后台页面里
+  由 `Include_Admin_UpdateAppAfter()` 输出的 `<script src>` 带出来的。
+  也就是说「迁移能否执行」取决于**管理员是否进入后台 + 浏览器是否执行了那段脚本**；
+  若站点是**手动覆盖文件**升级（Z-Blog 上很常见），两个钩子根本不会触发，迁移永远不会跑。
+  因此把 `?act=` / `&act=` 做成**输出层不变量**：`at8_pagespeed_blacklist_effective()` 在注入前
+  台前始终合并这两项（O(1) 纯数组追加，不写库、不依赖版本），任何升级路径下都成立。
+- **存量站点迁移**：`InstallPlugin_at8_pagespeed()` 原为「仅补齐缺失键、不覆盖已存值」的幂等
+  设计，**只改默认值对已安装站点完全无效**。新增 `at8_pagespeed_migrate_config()`
+  （`ConfigVer` 1 → 2），由 `InstallPlugin_` / `UpdatePlugin_` / 设置页加载**三处**调用
+  （第三处专门覆盖手动覆盖文件升级的场景）：
+  1. 黑名单仍是旧默认值（用户从未自定义）→ 整条替换为新默认值；
+  2. 用户已自定义 → **仅追加缺失的 `?act=` / `&act=`**，其余条目原样保留。
+  迁移**只做加法**，绝不删改用户自己写的关键字。设置页保存时同样会补回被误删的强制项，
+  保证「界面显示 = 库里配置 = 实际生效」三者一致。
+- **文档修正**：README 中「默认已排除退出登录、后台、购物车、支付、删除、编辑、feed 等」
+  与实际不符（删除 / 编辑当时并未被拦），已改为按实际覆盖范围描述并补充「为什么必须拦 `?act=`」
+  的说明；`plugin.xml` 的 `<description>` 同步；实测环境由 PHP 8.2 更正为 **8.3.33**
+  （`include.php` 头部注释、`plugin.xml` 的 `<phpver>` 依据、README 兼容性表）。
+
 ## 1.0.6（2026-09-24）
 
 规范符合性微调（无功能变更）：
