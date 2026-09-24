@@ -20,7 +20,7 @@
   3. 源码未使用任何 PHP 8.0+ 专有语法——已全量扫描确认无 `?->`、`match` 表达式、
      `str_contains` / `str_starts_with` / `str_ends_with`、`#[Attribute]`、构造器提升、
      联合类型、`enum`、`readonly`、`never`、命名参数。
-  原先声明 5.6 属「语法够用即放行」，现改为只放行做过兼容性承诺的版本区间。
+  原先按「语法够用即放行」声明，现改为只放行做过兼容性承诺的版本区间。
 - **DNS 预取域名改为「保存时即归一化」**（纵深防御）：
   原先只在输出到前台时校验，库里存的是用户原始输入（含 `not a domain`、`http://evil.com/x`、
   `<script>alert(1)</script>` 这类脏数据）。现抽出 `at8_pagespeed_normalize_domain()`，
@@ -74,9 +74,7 @@
     与「不承诺固定提速数值」。
 
 - **元数据**：
-  - `<phpver>` 的依据注释与源码注释对齐：代码语法与函数最低要求 5.4（`JSON_UNESCAPED_UNICODE`），
-    声明下限取 **5.6**——5.4 / 5.5 未做实测故不作兼容承诺（原注释写「仅使用 PHP 5.4+ 通用语法」但声明 5.6，
-    理由与取值不一致）；
+  - `<phpver>` 的依据注释与源码注释对齐（当时声明的 PHP 下限已于 **1.0.5** 提高至 **7.4**）；
   - `<adapted>` 补充取值依据：与 `$zbp->version` 做数值比较（`lib/app.php` 的 `CheckCompatibility()`），
     1.7.x 的 `$zbp->version` 为 `MAJOR.MINOR.COMMIT`（如 1.7.5 Build 3540 → `173540`），
     取 `172900` 表示面向 1.7 系列、可拦住 1.6 及更早版本；
@@ -115,7 +113,7 @@
   配置作为站点级偏好保留、重装自动沿用；
 - **安装幂等**：`InstallPlugin_at8_pagespeed()` 仅补齐缺失配置键，不再覆盖用户已保存的值；新增 `UpdatePlugin_at8_pagespeed()`（按 `ConfigVer` 迁移）与旧版钩子别名；
 - **输出转义**：设置页 `lang` 属性输出经 `htmlspecialchars` 处理；
-- **元数据**：`plugin.xml` 补充 `<description>`、显式声明 `<phpver>5.6</phpver>`（原打包脚本写死 5.2，与实际无关）；
+- **元数据**：`plugin.xml` 补充 `<description>`、显式声明 `<phpver>`（原打包脚本写死 5.2，与实际无关；当前值为 **7.4**，见 1.0.5）；
 - 新增 `LICENSE` / `CHANGELOG.md` / `RELEASE_CHECKLIST.md`。
 
 ## 1.0.0（2026-09-23）
