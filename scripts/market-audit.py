@@ -243,13 +243,26 @@ for name in ("at8-guard.js", "at8-lazy.js"):
 
 # ---------------- 14. 目录污染 ----------------
 print("\n### 14. 仓库目录污染")
-DIRTY = [".git", ".github", "node_modules", "vendor", "test", "tests",
-         ".env", "debug", "dist", ".idea", ".vscode"]
+# 「绝不允许存在」的开发/依赖目录
+DIRTY = [".github", "node_modules", "vendor", "test", "tests",
+         ".env", "debug", ".idea", ".vscode"]
+# 「允许存在、但必须被 zbignore 排除出包」的构建产物目录（规范 §75 要求产出 dist/）
+BUILD_OUT = ["dist", "build"]
 found = [d for d in DIRTY if os.path.exists(os.path.join(ROOT, d))]
-# .git 是仓库本身，允许存在于仓库，但不得进包
-repo_only = [d for d in found if d == ".git"]
-bad_dirs = [d for d in found if d != ".git"]
-check("无开发/测试/依赖目录（.git 除外）", not bad_dirs, bad_dirs)
+check("无开发/测试/依赖目录（.git 除外）", not found, found)
+
+_ign = []
+_igf = os.path.join(ROOT, "zbignore.txt")
+if os.path.isfile(_igf):
+    _ign = [l.strip().strip("/") for l in rd(_igf).splitlines()
+            if l.strip() and not l.strip().startswith("#")]
+_bad_out = [d for d in BUILD_OUT
+            if os.path.exists(os.path.join(ROOT, d)) and d not in _ign]
+check("构建产物目录已列入 zbignore（dist/build 不得进包）", not _bad_out, _bad_out)
+_present_out = [d for d in BUILD_OUT if os.path.exists(os.path.join(ROOT, d))]
+if _present_out:
+    print("       存在且已排除的构建产物目录：%s" % _present_out)
+
 logs = [rel(p) for p in walk((".log",))]
 check("无 *.log 文件", not logs, logs[:5])
 secrets = [rel(p) for p in walk((".pem", ".key", ".sql", ".p12", ".pfx"))]
