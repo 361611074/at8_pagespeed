@@ -2,5 +2,10 @@ CHANGELOG.md
 RELEASE_CHECKLIST.md
 screenshots
 zbignore.txt
+release-manifest.txt
+release-forbidden.txt
+docs
+scripts
+dist
 cache
 .git

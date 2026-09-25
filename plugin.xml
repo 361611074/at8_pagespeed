@@ -38,9 +38,9 @@
 	         1.7.5.3540 → 173540（测试站实测值）
 	     取 173510 表示最低要求 Z-BlogPHP 1.7.5 Build 3510，可拦住 1.7.4 及更早版本。 -->
 	<adapted>173510</adapted>
-	<version>1.0.9</version>
+	<version>1.1.0</version>
 	<pubdate>2026-09-23</pubdate>
-	<modified>2026-09-24</modified>
+	<modified>2026-09-25</modified>
 	<price>0</price>
 	<!-- 最低 PHP 版本（安装门槛，lib/app.php 据此拒绝安装）：7.4
 	     依据：① 全量文件在 PHP 7.3.4 通过 php -l（7.3.4 严于 7.4，向下兼容已覆盖）；

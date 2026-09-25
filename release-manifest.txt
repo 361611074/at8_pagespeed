@@ -1,0 +1,22 @@
+# 发布包内容白名单（规范 §49）
+#
+# 最终 .zba 中每个文件都必须能回答「为什么需要」。
+# 本文件与 zbignore.txt 互为补充：这里列的是「应该进包」的清单，
+# 构建后由 scripts/market-audit.py --zba <file> 逐项核对。
+
+# --- 插件运行必需 ---
+plugin.xml                  # 应用中心元数据（id / 版本 / 最低 PHP 与 Z-Blog 版本 / 说明）
+include.php                 # 插件入口：注册 Hook、前台注入、配置默认值与迁移
+main.php                    # 后台设置页（权限 + CSRF + 保存 / 清除配置）
+style.css                   # 后台设置页样式（仅后台引入，不进前台）
+
+# --- 前台资源（全部本地内置，无外站引用） ---
+assets/instantpage.js       # 第三方 instant.page v5.2.0（MIT），链接预加载核心
+assets/at8-guard.js         # 自研：黑名单关键词 → data-no-instant 标记
+assets/at8-lazy.js          # 自研：视口外图片 / iframe 补 loading="lazy"
+
+# --- 展示与合规 ---
+logo.png                    # 应用中心与后台左侧菜单图标
+LICENSE                     # 本插件 MIT 许可证全文
+README.md                   # 应用中心详情 / 使用说明 / 兼容性 / 隐私
+THIRD-PARTY-LICENSES.md     # 第三方组件许可证与完整性校验记录（instant.page）

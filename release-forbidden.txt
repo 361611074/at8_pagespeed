@@ -1,0 +1,61 @@
+# 发布包内容黑名单（规范 §50）
+#
+# 构建后由 scripts/market-audit.py --zba <file> 逐项核对；
+# 命中任意一项即视为发布包不合格。
+
+# 版本控制与 CI
+.git
+.gitignore
+.gitattributes
+.gitmodules
+.github
+
+# 依赖与构建产物
+node_modules
+vendor
+vendor-cache
+dist
+build
+
+# 测试与开发
+test
+tests
+__tests__
+docs
+scripts
+debug
+debug.log
+
+# IDE 与操作系统
+.idea
+.vscode
+.vs
+.settings
+.DS_Store
+Thumbs.db
+desktop.ini
+__MACOSX
+
+# 敏感信息
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.sql
+credentials
+credentials.*
+secret*
+password*
+token*
+*.log
+
+# 本项目特定：仓库文档与截图，不随分发包发布
+CHANGELOG.md
+RELEASE_CHECKLIST.md
+zbignore.txt
+release-manifest.txt
+release-forbidden.txt
+screenshots
+cache
