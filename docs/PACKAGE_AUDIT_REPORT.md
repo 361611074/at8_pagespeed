@@ -10,13 +10,13 @@
 | 项目 | 值 |
 |---|---|
 | 文件名 | `at8_pagespeed_1.1.0_20260925.zba` |
-| 体积 | **50459 B**（49.3 KB） |
-| md5 | `e8554d0d15fac7f241ab6d166e2c8533` |
-| sha256 | `ce3c89c89f7db22f6ebcaa74b60a3e0707713a24a62c3b547f393cf97f71242f` |
+| 体积 | **51017 B**（49.8 KB） |
+| md5 | `e0058763e5d2d476ad7960ff23a83ca0` |
+| sha256 | `f80d078e487981e28168154e903a0744ca156b20466b1524d9635b8f607ee31b` |
 | 容器格式 | gzip（魔数 `1F 8B`）+ XML（`<app version="php" type="plugin">`） |
-| 解压后 XML | 114497 B |
+| 解压后 XML | 116707 B |
 | 包内文件 | 11 个文件 + 1 个目录 |
-| 源文件总字节 | 83955 B |
+| 源文件总字节 | 84889 B |
 
 > `.zba` 不是 zip。Z-BlogPHP 1.7.5 `zb_system/function/lib/app.php` 的 `App::UnPack()`
 > 先判断前两字节是否为 `0x1F 0x8B`，是则 `gzdecode`，再按 XML 解包。
@@ -119,14 +119,14 @@
 
 | 组成 | 字节 | 占比 |
 |---|---|---|
-| `instantpage.js`（第三方 vendored） | 17175 | 20.5% |
-| `README.md` | 22368 | 26.6% |
-| PHP（`include.php` + `main.php`） | 23741 | 28.3% |
+| `instantpage.js`（第三方 vendored） | 17175 | 20.2% |
+| `README.md` | 22683 | 26.7% |
+| PHP（`include.php` + `main.php`） | 24360 | 28.7% |
 | `THIRD-PARTY-LICENSES.md` | 2877 | 3.4% |
-| 其余（js/css/logo/xml/LICENSE） | 17794 | 21.2% |
-| **合计** | **83955** | 100% |
+| 其余（js/css/logo/xml/LICENSE） | 17794 | 21.0% |
+| **合计** | **84889** | 100% |
 
-gzip 压缩后 50459 B。相对 1.0.9 包（44704 B）增大约 5.6 KB，主要来自
+gzip 压缩后 51017 B。相对 1.0.9 包（44704 B）增大约 6.2 KB，主要来自
 新增的 `THIRD-PARTY-LICENSES.md`、README 扩充章节与新增的「清除插件配置」功能代码。
 
 ## 八、结论

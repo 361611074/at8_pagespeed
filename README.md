@@ -57,7 +57,7 @@
 
 ### 主题与插件
 
-- **依赖系统标准模板变量**：注入点为 `$header` / `$footer`（主题 `header.php` / `footer.php` 中的标准标签）。只要主题按官方规范输出这两个变量即可生效；若主题未输出，本插件会静默不注入，不会报错。
+- **依赖系统标准模板变量**：注入点为 `$header` / `$footer`（主题 `header.php` / `footer.php` 中的标准标签）。只要主题按官方规范输出这两个变量即可生效——**官方默认主题（default / Zit 等）亦在实测范围内**（1.7.5 核心默认不预填这两个变量，插件以官方模板标签键为准，不再因变量为 null 而跳过）；若主题未输出，本插件不会报错；
 - **`$footer` 需位于 `<body>` 内**：instant.page v5 的触发延迟读取自 `document.body` 的属性，插件在 `$footer` 中写入该属性。若主题把 `$footer` 放到 `<head>`（不符合官方规范），延迟设置不生效，其余功能不受影响。
 - 与其它插件无已知冲突：不占用系统 Hook 业务点，仅注册两个过滤器（输出追加 + 后台菜单）。
 
@@ -171,6 +171,7 @@
 - 新增 `THIRD-PARTY-LICENSES.md`（第三方许可证与完整性校验）与「高级 → 清除插件配置」入口（带二次确认，只删本插件自己的配置）；
 - CSS class 前缀统一为 `.at8ps-*`；后台输出转义进一步加强；DNS 预取补充「不会向这些域名发送 API 请求」的说明；
 - 新增 `scripts/market-audit.py` 自动审核脚本、`release-manifest.txt` / `release-forbidden.txt` 与 `docs/` 审计报告；
+- **修复官方默认主题下前台不注入的问题**（1.7.5 核心 `$zbp->header` 默认为 null，原 `isset()` 判断恒 false）；
 - Hook 数量、默认黑名单、迁移策略均未改变。
 
 完整变更见 [`CHANGELOG.md`](CHANGELOG.md)，测试矩阵见 [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md)。

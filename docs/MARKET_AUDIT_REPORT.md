@@ -10,7 +10,7 @@ Audit Date:
 Audit Basis:
 Z-BlogPHP 1.7.5 Build 3540 / PHP 8.3.33 / MySQL 5.7
 测试站 http://zblog.xmm.fan
-发布包 `at8_pagespeed_1.1.0_20260925.zba`（50459 B，md5 `e8554d0d15fac7f241ab6d166e2c8533`）
+发布包 `at8_pagespeed_1.1.0_20260925.zba`（51017 B，md5 `e0058763e5d2d476ad7960ff23a83ca0`）
 
 ================================
 1. OVERALL RESULT

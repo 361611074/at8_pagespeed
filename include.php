@@ -158,7 +158,13 @@ function at8_pagespeed_tags(&$tags)
     if (!at8_pagespeed_is_frontend()) {
         return;
     }
-    if (!isset($tags['header']) || !isset($tags['footer'])) {
+    // 用 array_key_exists 而非 isset：核心 $zbp->header / $zbp->footer 默认值为 null
+    // （见 ZBP 类属性声明 public $header = null; / public $footer = null;），
+    // MakeTemplateTags() 里 templateTags['header'] = &$zbp->header 是**指向 null 的引用**，
+    // isset() 对 null 引用恒为 false —— 若用 isset 判断，官方默认主题（不自行填充
+    // $zbp->header 的主题）会被静默跳过、前台完全不注入。模板标签键始终存在，
+    // 因此这里只校验键存在；追加用 .= ，null 会被安全地转为字符串。
+    if (!array_key_exists('header', $tags) || !array_key_exists('footer', $tags)) {
         return;
     }
 

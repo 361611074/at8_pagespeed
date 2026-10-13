@@ -1,330 +1,369 @@
-# at8_pagespeed 1.0.9 — 发布检查清单（RELEASE_CHECKLIST）
+# at8_pagespeed 1.1.0 — 发布检查清单（RELEASE_CHECKLIST）
 
-检查基准：《Z-BlogPHP 插件 AI Agent 开发规范》§29 + `zblog审核.md`（上架审核专项清单）
-实测环境：Z-BlogPHP **1.7.5**（Build 3540）/ PHP 7.3.4（本地 `php -l`）+ PHP 8.3.33（测试站 zblog.xmm.fan）/ MySQL
-检查日期：2026-09-24
-版本：1.0.9（`plugin.xml` / `AT8_PAGESPEED_VERSION` / 本文件 三处一致）
+**版本**：1.1.0（`plugin.xml` / `AT8_PAGESPEED_VERSION` / `CHANGELOG.md` / `README.md` / 本文件 **五处一致**）
+**检查日期**：2026-10-13
+**实测环境**：Z-BlogPHP **1.7.5 Build 3510**（官方发布包 `zblogphp-1.7.5.3510.zip`，`blogversion=173510`）+ **PHP 8.2.33**（Windows 便携版）+ **SQLite** + 内置服务器（`php -S 127.0.0.1:8899`）
+**检查基准**：《Z-BlogPHP 插件 AI Agent 开发规范》§29 + 应用中心上架审核清单
 
-## 1. 元数据与标识
+> **本清单的编写原则**
+> 1. **只记录 2026-10-13 本次实际重新执行并通过的断言**，共 **215 项**（S0–S9 运行期 109 项 + A–E 静态 59 项 + 发布物打包与安装验收 47 项），全部 PASS / 0 FAIL。
+> 2. 往届版本（1.0.x）的测试结论**不再直接沿用**；未随本次重新执行的项已单独列在 **§10**，需要时须重跑后方可引用。
+> 3. 每条断言都有稳定编号（如 `S5.2`、`A.6`），可用 §11 的命令复现。
+
+---
+
+## 1. 元数据与标识（实测 A 节 10/10）
 
 | 项 | 值 | 结果 |
 |---|---|---|
-| 插件 ID | `at8_pagespeed` | ✅ 长期稳定，未随重构改名 |
+| 插件 ID | `at8_pagespeed` | ✅ 未改名 |
 | 插件名称 | 页面加速 | ✅ |
-| 版本号 | 1.0.9（`plugin.xml` 与 `AT8_PAGESPEED_VERSION` 一致） | ✅ 十进制封十进一 |
-| 目录 / 文件前缀 | 函数 `at8_pagespeed_*`、CSS `.ps-*`、JS `window.at8Ps*`、配置键 `conf_Name=at8_pagespeed` | ✅ 无通用命名 |
-| `plugin.xml` 必填节点 | id/name/url/note/description/path/include/level/author/source/adapted/version/pubdate/modified/price/**phpver**/advanced | ✅ 齐全 |
-| 作者与官网 | 漫步白月光 / https://www.at8.fun/ | ✅ |
-| `<source>` 来源名称 | 漫步白月光（**1.0.3 修正**：原为模板遗留值，与 `<author>` 不一致） | ✅ 已一致 |
+| 版本号 | `1.1.0` | ✅ `A.1`/`A.2`/`A.3`/`A.5` 四处一致（`plugin.xml` `<version>`、`include.php` 常量、`CHANGELOG.md` 首条、`README.md` 更新日志首条） |
+| 版本号格式 | 十进制封十进一（1.1.0） | ✅ `A.5` 无 `1.1.10` 式写法 |
+| 命名前缀 | 函数 `at8_pagespeed_*`、常量 `AT8_PAGESPEED_VERSION`、CSS `.at8ps-*`、JS 全局 `window.at8Ps*`、配置命名空间 `conf_Name=at8_pagespeed` | ✅ 全量扫描无通用命名 |
+| `plugin.xml` 必填节点 | id/name/url/note/description/path/include/level/author/source/adapted/version/pubdate/modified/price/phpver/advanced | ✅ 齐全 |
+| 作者 / 来源 | 漫步白月光 / https://www.at8.fun/（`<author>` 与 `<source>` 一致） | ✅ |
+| 日期一致性 | `pubdate=2026-09-23`、`modified=2026-09-25`，与 CHANGELOG/README 的 1.1.0 日期一致 | ✅ `A.8`/`A.9` |
+| 本文件版本声明 | = `plugin.xml` `<version>` | ✅ `A.4` |
 
-## 2. 最低系统与 PHP 要求
+> **修正记录**：1.0.9 版清单曾把 CSS 前缀写作 `.ps-*`；1.1.0 已统一为 `.at8ps-*`，本文件按实际代码更新。
 
-| 项 | 值 | 依据 |
+## 2. 最低系统与 PHP 要求（实测 A.6 / A.7 + S8）
+
+| 项 | 值 | 依据（本次实测） |
 |---|---|---|
-| 最低 Z-BlogPHP | **1.7.5 Build 3510**（`plugin.xml` 的 `<adapted>173510</adapted>`） | ① 核心 `lib/app.php` 的 `CheckCompatibility()` 为 `(int)$adapted > (int)$zbp->version` 整数比较，超过即拒装 → 该值声明的是**最低**版本；② `$zbp->version` 取自 `c_system_version.php` 的 `MAJOR . MINOR . COMMIT` 拼接（**BUILD 位不参与**），1.7.5.3510 → `173510`，测试站 1.7.5.3540 实测 `173540`；③ 功能依赖 `Filter_Plugin_Zbp_MakeTemplatetags` 引用传递、`$zbp->ismanage`、`CheckIsRefererValid()`、`Config()` 单参属性式 |
-| 最低 PHP | **7.4**（`plugin.xml` 显式声明；打包脚本读取，不再写死 5.2） | ① 全量文件 PHP **7.3.4** 通过 `php -l`（严于 7.4）；② 运行时 PHP **8.3.33** 实测零报错；③ 无 PHP 8.0+ 专有语法（已全量扫描 `?->` / `match` 表达式 / `str_contains` / `#[Attribute]` / 构造器提升 / 联合类型 / `enum` / `readonly` 均 0 命中） |
-| 数据库 | MySQL / SQLite / PostgreSQL | 不建表、不写库结构，仅用官方配置存取 |
-| 第三方依赖 | 仅内置 instant.page v5.2.0（MIT，本地文件，无 Composer、无 CDN） | §23 |
+| 最低 Z-BlogPHP | **1.7.5 Build 3510**（`<adapted>173510</adapted>`） | ① `A.6`：从 1.7.5.3510 的 `c_system_version.php` 实读 `MAJOR=1 / MINOR=7 / COMMIT=3510 / BUILD=5`，按核心 `blogversion = MAJOR.MINOR.COMMIT` 拼接推导得 `173510`，与 `<adapted>` **完全一致**（BUILD 位确实不参与）；② `S8.3`：构造 `adapted=173600` 的探针插件，在该基准站启用时被核心 `CheckCompatibility()` 拒绝（HTTP 500，错误 78「该应用需要…及以上版本的Z-BlogPHP」），**证明该值确实起「最低版本门槛」作用**；③ `S8.4`：对照 `adapted=173510` 启用放行 |
+| 最低 PHP | **7.4**（`<phpver>` 显式声明） | ① `E.1`/`E.2`：包内全部 PHP 文件在 PHP 8.2.33 通过 `php -l`；② `E.4`：全量扫描无 PHP 8.0+ 专有语法（`?->` / `match` / `str_contains` / `enum` / `readonly` / 构造器提升 / 联合类型 / `#[Attribute]` 均 0 命中）；③ `S9`：运行时（PHP 8.2.33 + debug 模式）9 个场景零报错 |
+| 数据库 | MySQL / SQLite / PostgreSQL | 不建表、不改表（`D.1` 零命中），仅用官方 `$zbp->Config()` 存取；本次在 **SQLite** 站点实测全流程 |
+| 第三方依赖 | 仅内置 instant.page v5.2.0（MIT，本地文件） | ✅ `D.5` 包内 JS 仅 3 个（`instantpage.js` + 自研 `at8-guard.js` / `at8-lazy.js`）；`D.6` `instantpage.js` MD5 = 声明值；`D.7` 无外站 CDN 引用 |
 
-## 3. 合规（无遗留项）
+## 3. 官方接口复核（实测 B 节 23/23）
 
-- [x] 无测试密钥、无硬编码 Token / 密码（全文件扫描 0 处）
-- [x] 无 Debug 残留（`var_dump` / `print_r` / `error_log` 0 处）
-- [x] 无 localhost、无开发 URL（0 处）
-- [x] 未修改 Z-BlogPHP 核心文件（`zb_system/` 零改动）
-- [x] 无虚构 Hook：仅使用 `Filter_Plugin_Zbp_MakeTemplatetags`、`Filter_Plugin_Admin_LeftMenu`（均经 1.7.5 源码确认存在）；已删除对不存在的 `Filter_Plugin_Zbp_Header/Footer` 的描述
-- [x] 无 `!important`（CSS 全文件 0 处）
-- [x] 无加密 / 混淆 PHP
-- [x] 文件编码 UTF-8 无 BOM
+**只使用 2 个官方 Hook**，均在 1.7.5.3510 源码中逐一确认存在：
 
-## 4. 生命周期（测试站实测）
-
-| 阶段 | 检查内容 | 结果 |
+| Hook | 用途 | 结果 |
 |---|---|---|
-| 安装 | 幂等：仅补齐缺失配置键，不覆盖用户已保存值；随后 `at8_pagespeed_migrate_config()` 把 `ConfigVer` 升到当前版本 | ✅ 重复安装后自定义值保留，`ConfigVer` 写入 |
-| 启用 | 仅注册输出过滤器 + 后台菜单，无其他副作用 | ✅ |
-| 正常运行 | 前台注入（header 预取 / footer 脚本）；后台、登录页、接口不注入 | ✅ 39 项断言全过 |
-| 停用 | **不丢配置**（1.7.5 停用会触发 `UninstallPlugin` 钩子） | ✅ Bug 已复现并修复，见下 |
-| 重新启用 | 配置沿用，前台立即恢复注入 | ✅ delay=180 + 黑名单全部保留 |
-| 升级 | `at8_pagespeed_migrate_config()` 按 `ConfigVer` 逐级迁移；由 `InstallPlugin_` / `UpdatePlugin_` / 设置页加载**三处**调用（覆盖手动覆盖文件升级） | ✅ 1.0.9 起 `ConfigVer` 1/2 → 3：只补齐缺失配置键，黑名单一律不动（不新增、不删除、不恢复） |
-| 卸载 | 本插件不建表不写文件；配置保留为站点级偏好 | ✅ 已在代码注释说明取舍理由 |
+| `Filter_Plugin_Zbp_MakeTemplatetags` | 前台 `header` / `footer` 追加输出 | ✅ `B.1` |
+| `Filter_Plugin_Admin_LeftMenu` | 后台左侧菜单项 | ✅ `B.1` |
 
-### 本次修复的数据丢失问题（已复现 + 已修复）
+**插件引用的全部官方符号均存在**（无虚构 API）：
 
-1.7.5 的 `DisablePlugin()` 内部会调用 `UninstallPlugin_<id>()`，即**「停用」与「卸载」共用同一钩子**；真卸载（AppCentre 删应用）反而只删目录、不触发该钩子。
-1.0.0 在该钩子里调用 `DelConfig()` → 每次停用清空全部设置。实测证据：
+- `$zbp` 成员 13 个（`B.4`）：`CheckPlugin` / `CheckRights` / `Config` / `DelConfig` / `SaveConfig` / `GetCSRFToken` / `SetHint` / `ShowError` / `Load` / `host` / `ismanage` / `path` / `guid`
+- 全局函数 6 个（`B.4b`）：`RegisterPlugin` / `Add_Filter_Plugin` / `CheckIsRefererValid` / `MakeLeftMenu` / `GetVars` / `Redirect`
+- 核心函数存在性（`B.2`）：`RegisterPlugin` / `Add_Filter_Plugin` / `CheckIsRefererValid` / `CheckCSRFTokenValid` / `MakeLeftMenu` / `GetVars` / `Redirect` / `GetCSRFToken`
+- `$zbp` 方法存在性（`B.3`）：`CheckPlugin` / `CheckRights` / `Config` / `DelConfig` / `SaveConfig` / `GetCSRFToken` / `SetHint` / `ShowError` / `Load`
+
+**边界确认**：`B.5` 未读取 `$auth->Code` / `$zbp->user->Password` 等敏感字段；`B.6` 未使用 `$zbp->LoadApp()` / 手动 `new App` 等内部构造（不绕开官方链路）。
+
+## 4. 合规确认（实测 C/D/E 节）
+
+### 4.1 无核心文件修改（与官方发布包逐字节对比）
+
+方法：解压官方 `zblogphp-1.7.5.3510.zip`，与测试站对应目录做「文件集合 + 逐文件 MD5」双向比对。
+
+| 目录 | 结果 |
+|---|---|
+| `zb_system/` | ✅ `C.1` 无新增 / 无删除 / 无修改（`added=0 removed=0 changed=0`） |
+| `zb_install/` | ✅ `C.1` 同上 |
+| `zb_users/theme/default/`（官方默认主题） | ✅ `C.1` 同上 |
+| `zb_users/theme/WhitePage/`（官方发行主题） | ✅ `C.1` 同上 |
+
+> 该比对同时构成「默认语言包未被改动」的证据（语言文件位于 `zb_users/language/`，属 `zb_users/` 下未参与改动的官方文件；插件目录为唯一新增项）。
+
+### 4.2 无自建重复业务系统（实测 D 节，范围 = 实际发包的 11 个文件）
+
+| 检查 | 结果 |
+|---|---|
+| `D.0` 审计范围 = 发包文件集（与 `S1.3` 包内清单同源） | ✅ 11 个 |
+| `D.1` 无 `CREATE/ALTER/DROP TABLE`、`CREATE INDEX` | ✅ 不建表、不自建存储 |
+| `D.2` 无 `setcookie` / `session_start` / `password_hash` / `password_verify` | ✅ 不存在第二套用户/权限/会话系统 |
+| `D.3` 无 `move_uploaded_file` / `fopen` / `file_put_contents` / `fwrite` | ✅ 不自建上传与文件管理 |
+| `D.4` 无 `curl_init` / `fsockopen` / `stream_context_create` | ✅ 无任何出站请求 |
+| `D.8` `LICENSE` + `THIRD-PARTY-LICENSES.md` 在包内 | ✅ |
+
+### 4.3 无未经许可的第三方代码
+
+| 检查 | 结果 |
+|---|---|
+| `D.5` 包内 JS 仅 `assets/instantpage.js`（第三方）+ `at8-guard.js` / `at8-lazy.js`（自研） | ✅ |
+| `D.6` `instantpage.js` MD5 = `9b05e316aedabe445698f148c00e9e5e`，与 `THIRD-PARTY-LICENSES.md` 声明值一致 | ✅ |
+| `D.7` 无外站 CDN / 远程脚本引用 | ✅ |
+| `E.6` 无硬编码密码 / Token / 密钥 | ✅ |
+
+### 4.4 代码质量与编码（实测 E 节 12/12）
+
+`E.1`/`E.2` `php -l` 全通过 ｜ `E.3` 无 BOM ｜ `E.4` 无 PHP 8.0+ 语法 ｜ `E.5` 无 `var_dump` / `print_r` / `error_log` / `!important` / `eval` / `base64_decode` / `assert` ｜ `E.6` 无硬编码凭据
+
+## 5. 打包与发布物（实测 S1 / S6 + 产物校验）
+
+### 5.1 官方打包器实测（`S1` 7/7）
+
+| 检查 | 结果 |
+|---|---|
+| `S1.1` 官方 `zb_users/plugin/AppCentre/app_pack.php` 打包成功，gzip 魔数 `1f8b` | ✅ |
+| `S1.2` 包为官方 app XML 结构（`<app version="php" type="plugin">`，`<id>at8_pagespeed</id>`） | ✅ |
+| `S1.3` 包内清单 = 仓库文件按 `zbignore.txt` 排除结果（**11 个**），`docs/` `scripts/` `dist/` `screenshots/` `.git` 均不在包内 | ✅ |
+| `S1.4` 无发布禁止项（`CHANGELOG.md` / `RELEASE_CHECKLIST.md` / `zbignore.txt` / `release-*` / `.git`） | ✅ |
+| `S1.5` 包内每个文件与仓库**逐字节一致**（逐文件 MD5 比对） | ✅ |
+| `S1.6` 包内 `plugin.xml` 元数据：`version=1.1.0` / `adapted=173510` / `phpver=7.4` | ✅ |
+| `S1.7` `README.md` / `LICENSE` / `logo.png` / `THIRD-PARTY-LICENSES.md` 在包内 | ✅ |
+
+### 5.2 包内清单（11 个文件，与 `S1.3` 一致）
 
 ```
-[复现] 1.0.0 include.php：停用前 delay=180、配置行 7 → 停用后 delay=''、配置行 0
-[修复] 1.0.1 include.php：停用前 delay=180 → 停用后 delay=180、配置行 7 → 重启用后仍 180、前台生效
+at8_pagespeed/plugin.xml
+at8_pagespeed/include.php
+at8_pagespeed/main.php
+at8_pagespeed/style.css
+at8_pagespeed/logo.png
+at8_pagespeed/README.md
+at8_pagespeed/LICENSE
+at8_pagespeed/THIRD-PARTY-LICENSES.md
+at8_pagespeed/assets/instantpage.js
+at8_pagespeed/assets/at8-guard.js
+at8_pagespeed/assets/at8-lazy.js
 ```
 
-### 预加载排除 —— 1.0.9 合规重构（移除系统接口专用拦截）
+**包外（按 `zbignore.txt`）**：`CHANGELOG.md`、`RELEASE_CHECKLIST.md`、`release-manifest.txt`、`release-forbidden.txt`、`zbignore.txt`、`docs/`、`scripts/`、`dist/`、`screenshots/`、`cache/`、`.git/`
 
-**历史背景**：1.0.7 曾认为默认黑名单拦不住系统操作 URL，于是在「默认值 / 输出层 / 保存时 /
-迁移时」四处加入了两个针对该类 URL 的强制关键字，并做成输出层不变量。
+### 5.3 最终发布物（`dist/at8_pagespeed_1.1.0_20260925.zba`）
 
-**1.0.9 的处理**：整套专用机制**全部移除**。依据是源码级的——
-
-> instant.page v5.2.0 自身默认**不预加载带 query string 的链接**（内置文件源码）：
->
-> ```js
-> // assets/instantpage.js:81
-> _allowQueryString = 'instantAllowQueryString' in document.body.dataset
-> // assets/instantpage.js:376  isPreloadable()
-> if (!_allowQueryString && anchorElement.search && !('instant' in anchorElement.dataset)) {
->   return
-> }
-> ```
->
-> 本插件**从未**设置 `data-instant-allow-query-string`（全仓库仅内置库第 81 行出现一次，属库自身代码），
-> 也从未给任何链接加 `data-instant`，因此该默认保护始终生效。
-> 即：带查询参数的链接本就不会被预加载，插件无需、也不应再针对系统路由做专门识别。
-
-**1.0.9 边界一览**：
-
-| 项 | 1.0.9 状态 |
+| 项 | 值 |
 |---|---|
-| 默认黑名单 | 通用关键词 7 项：`logout` / `login` / `cart` / `checkout` / `pay` / `order` / `feed` |
-| 输出层强制补齐 | **已移除** → 改为纯通用解析 `at8_pagespeed_blacklist_lines()` |
-| 保存时强制补齐 | **已移除** → 原样保存用户填写内容 |
-| 迁移时强制补齐 | **已移除** → `ConfigVer` 推进到 3，黑名单不动 |
-| `at8_pagespeed_blacklist_legacy()` | **已删除** |
-| `at8_pagespeed_blacklist_required()` | **已删除** |
-| `at8_pagespeed_blacklist_effective()` | **已删除** |
-| `data-instant-allow-query-string` | **不设置**，尊重 instant.page 默认策略 |
-| `isPreloadable()` | **不修改、不 fork、不重写** |
-| `preventDefault` / `stopPropagation` / `return false` | **不使用**，`data-no-instant` 只表示不预加载 |
+| 文件 | `dist/at8_pagespeed_1.1.0_20260925.zba` |
+| 体积 | **51017 B** |
+| MD5 | `e0058763e5d2d476ad7960ff23a83ca0` |
+| SHA256 | `f80d078e487981e28168154e903a0744ca156b20466b1524d9635b8f607ee31b` |
+| 文件数 | 11（与 §5.2 清单一致，逐文件 MD5 与仓库相等） |
+| 元数据 | `version=1.1.0` / `adapted=173510` / `phpver=7.4` / `pubdate=2026-09-23` / `modified=2026-09-25` |
+| `<verify>` | `base64("https://www.at8.fun/\n")` —— 正式站 host + 根目录空 path |
+| 产出方式 | 官方 `App::Pack()` + `gzencode($s, 9, FORCE_GZIP)` |
 
-> **关于配置迁移的调用点**（该事实与 1.0.9 无关，但仍是迁移设计的依据）：
-> Z-BlogPHP 核心并没有 `UpdatePlugin()` 函数（核对 1.7.5 源码，`c_system_plugin.php`
-> 仅 `InstallPlugin` / `UninstallPlugin`）。官方升级钩子实际由 `c_system_misc.php` 的
-> `misc&type=updatedapp` 路由触发，而该路由是后台页面里 `<script src>` 带出来的
-> —— 迁移能否执行取决于「管理员进后台 + 浏览器执行脚本」。
-> 因此 `at8_pagespeed_migrate_config()` 仍在 `InstallPlugin_` / `UpdatePlugin_` /
-> `main.php`（设置页加载）**三处**调用，覆盖手动覆盖文件升级的场景。
-> 1.0.9 起该函数只补齐缺失的配置键，不再改动黑名单。
+### 5.4 发布物打包与安装验收（47/47 PASS）
 
-## 5. 安全
+**为什么 `<verify>` 需要单独处理**（1.7.5.3510 源码实锤）：
 
-| 项 | 检查 | 结果 |
+- `App::Pack()` 写入 `<verify>base64_encode($zbp->host . "\n" . $zbp->path)</verify>`；
+- `$zbp->path = $GLOBALS['blogpath'] = ZBP_PATH`（**站点文件系统路径**），`$zbp->host` 由 `$_SERVER['HTTP_HOST']` 自动识别；
+- 因此在本地测试站直接打包会得到 `http://127.0.0.1:8899/` + 本机路径，把测试环境痕迹带进发布物；
+- 核心 `zblogphp.php:825` 本意提供 `ZC_PERMANENT_DOMAIN_FORCED_URL` 强制域名，但它以 `GetValueInArray($this->option, ...)` 读取，而 `$zbp->option` 是对象、`GetValueInArray()` 对非数组入参**直接返回 default** ⇒ **该分支在 1.7.5 中不可达**（已实测：写入该配置项后打包，`<verify>` 仍为测试站指纹）；
+- 故改用一次性入口 `_pack_release.php`：**仍调用官方 `App::Pack()` + `gzencode()`**，仅把 `Pack()` 所读取的 `host` / `path` 设为正式站值；该入口打包后即删除，不进仓库。
+
+**打包断言（`pack_release.py`，24/24 PASS）**：
+
+| 组 | 内容 | 结果 |
 |---|---|---|
-| 权限 | 后台页 `CheckRights('admin')` + `CheckPlugin()` | ✅ |
-| CSRF | 写操作 `CheckIsRefererValid()`（失败 `ShowError(5)` 终止），表单 token 用无参 `GetCSRFToken()` | ✅ 合法 token 保存生效；篡改 token 被拦且配置未变 |
-| XSS | 前台输出 `htmlspecialchars`（含 `lang` 属性）；DNS 域名白名单正则；黑名单 `json_encode` 注入 | ✅ |
-| 开放重定向 | 已移除 `Redirect($_SERVER['HTTP_REFERER'])`，固定回设置页 | ✅ 跳转目标实测为本站设置页 |
-| SSRF | 无任何外部 HTTP 请求 | ✅ N/A |
-| 文件上传 / 文件系统 | 不涉及 | ✅ N/A |
-| 路径穿越 | 不涉及 | ✅ N/A |
-| 输出注入 | 黑名单关键字限长 100 且按行白名单化；域名去协议去路径 + 格式校验 | ✅ 非法域名实测被丢弃 |
+| `R0` | 后台登录可用；仓库源码同步到测试站插件目录；打包入口就位 | 3/3 ✅ |
+| `R1` | 基线包由官方 HTTP 入口 `app_pack.php` 产出（gzip）；其 `<verify>` 为测试站指纹（对照用） | 2/2 ✅ |
+| `R2` | 发布包由官方 `App::Pack()` 产出；`<verify>` == `"https://www.at8.fun/\n"`，与 git 中历史发布物一致 | 3/3 ✅ |
+| `R3` | `<app version="php" type="plugin">` 结构；`id`/`version`/`adapted`/`phpver`/`name`/`path`/`include`/`pubdate`/`modified`/`price` 元数据；包内清单 == 仓库应发包清单（严格相等）；逐文件 MD5 与仓库一致；无禁止项；`include.php` 含 `array_key_exists` 修复且 MD5 与仓库一致 | 12/12 ✅ |
+| `R4` | 与基线包做**差分**：除 `<verify>` 外 XML 完全相同、11 个文件内容完全一致 → 证明官方打包链路未被人为改动 | 2/2 ✅ |
+| `R5` | 落盘 `dist/`；打包辅助入口删除、站点无残留 | 2/2 ✅ |
 
-## 6. 性能
+**安装验收（`verify_release.py`，用上表这个具体产物走官方链路，23/23 PASS）**：
 
-- [x] 无 N+1 查询（不访问数据库，仅读 1 次插件配置，且 `Config()` 请求内缓存）
-- [x] 无远程请求（脚本全部本地）
-- [x] 前台输出为纯字符串拼接，无循环 IO
-- [x] 脚本 `defer` 加载，不阻塞渲染
-
-## 7. 测试与验收记录
-
-- 本地：`php -l` 全通过，`node --check` 通过（3 个 JS），`plugin.xml` 可解析，`!important` = 0
-- 测试站（zblog.xmm.fan）：**39 项断言 39 PASS / 0 FAIL**，含 debug 模式下 5 个页面零 `Notice/Warning/Deprecated`
-- 安装回归（1.0.4）：**25 项断言 25 PASS / 0 FAIL**（干净包经官方「应用中心 → 上传应用」链路实装；落地清单与包内清单严格相等；无 `.git` 残留；额外落地文件仅 `cache/`，属运行时缓存）
-- **升级回归（1.0.2 → 1.0.3 → 1.0.4，官方上传应用链路覆盖安装）**：版本常量与 `plugin.xml` 同步 ✅ / 配置 7 项全部保留 ✅ / 9 个落地文件与包内清单一致 ✅
-- **功能回归（1.0.4）**：**39 项断言 39 PASS / 0 FAIL** —— 前台注入、后台不注入、登录页不注入、设置页渲染、CSRF 合法/篡改两组、重复安装幂等、debug 模式 5 页零报错、停用不丢配置（★）、重启用沿用
-- **前台脚本功能级测试（1.0.4，真实浏览器构造 DOM）**：**22 项断言 22 PASS / 0 FAIL** —— 黑名单大小写/URL 编码绕过拦截、正常链接不误伤、容器级与嵌套排除、`data-no-lazy` 不影响预加载、首屏跳过计数、已有 `loading` / `fetchpriority` 不被改写、`display:none` 不处理、iframe 补属性、动态插入兜底
-- **打包结构校验（1.0.4）**：**26 项 26 PASS** —— gzip 魔数、根节点 `version="php"` + `type="plugin"`、`<id>` 等于目录名、`<folder><path>` 与 `<file><path>+<stream>` 结构完整、路径均以 `<id>/` 开头且无 `./`、内容逐字节一致
-- **安全扫描（1.0.4）**：**需人工复核项 0**；22 处规则命中已逐条复核并白名单化（上游库注释链接、缓存写入、附件删除等），BOM 0 处、`!important` 0 处
-- **前台注入实测（1.0.4）**：`<head>` 注入 `<!-- at8_pagespeed 1.0.4 -->` + `x-dns-prefetch-control` + `link[rel=dns-prefetch]`；`</body>` 前注入 `at8PsLazySkip` / `at8-lazy.js` / 内联写 `data-instant-intensity` / `at8PsBlacklist`+`at8PsPreloadDelay` / `at8-guard.js` / `instantpage.js` —— 与代码预期逐项一致
-- **debug 模式实测**：页面内 `Fatal error` / `Parse error` / `Warning` / `Deprecated` / `Notice` / `Uncaught` 关键字**零命中** ✅
-- 界面回归（1.0.2）：**17 项断言 17 PASS / 0 FAIL** —— 设置页已接入官方后台框架，`admin2.css` / `zblogphp.js` 已加载、顶栏 `#topmenu` 与左侧菜单 14 项（含 `nav_at8_pagespeed`）正常渲染、仅 1 个 doctype、无 PHP 告警、保存往返正常
-- 布局对齐实测（1440×900）：`#divMain` 宽 1280 / 起点 x=150 / `max-width:none`、内容容器内距 `20px 24px 60px` / `max-width:1400px` —— 与 `at8_media_library` 设置页逐项一致
-- 回归复现脚本：`audit_pagespeed.py`、`audit_repro_disable.py`、`test_zba_install_clean.py`、`deploy_ps_102.py`、`shot_release_ps.py`（截图）
-
-## 7.1 模拟用户全流程 + debug 模式（`test_user_flow_debug.py`，**52 项 52 PASS**）
-
-全程开启 `ZC_DEBUG_MODE=true`，按真实用户使用顺序走一遍，每步都扫
-`Fatal / Parse / Warning / Notice / Deprecated / Strict Standards / Uncaught / Undefined` 八类报错。
-
-| 阶段 | 操作 | 结果 |
+| 组 | 内容 | 结果 |
 |---|---|---|
-| 登录 | 登录页 → 提交凭据 → 进后台首页 | ✅ 零报错 |
-| 配置（正常值） | 打开设置页 → 改 6 项 → 保存 | ✅ 302 回本页、值全部落库 |
-| 配置（边界值） | 延迟填 `0`、跳过填 `0` | ✅ 接受（最激进档） |
-| 配置（超上限） | 延迟填 `99999`、跳过填 `999` | ✅ 被夹紧为 `2000` / `20`，未写入脏值 |
-| 配置（恶意输入） | DNS 填 `not a domain` / `http://evil.com/x` / `<script>alert(1)</script>` / `good.example.com` | ✅ 库里只剩 `evil.com` + `good.example.com`；前台 DNS 链接全部合法、无恶意串 |
-| 关闭全部开关 | 两个功能都关 → 前台验证 | ✅ 不再注入任何脚本 |
-| 媒体库 | 上传中文名 PNG → 改名 → 删除 | ✅ 记录 +1 → 改名无报错 → 删除后回到初始 |
-| 媒体库（非法输入） | `act=evil<script>`、`id=1 OR 1=1` | ✅ 400 拒绝且不回显 / 不误删数据 |
-| 停用 → 重启用 | 两个插件各一轮 | ✅ ★停用不丢配置（7→7）、不丢附件记录；重启用后自定义值 180 沿用 |
-| debug 开关 | 结束时还原 `false` | ✅ |
+| `V0`–`V1` | 产物存在且含 11 文件；回到干净状态（目录移除、不在启用列表、前台零输出） | 6/6 ✅ |
+| `V2` | 官方 `app_upload.php` 上传 → `App::UnPack` 落盘 11 文件，与包内**逐字节一致**；上传本身不触发生命周期钩子 | 4/4 ✅ |
+| `V3`–`V5` | 官方 `PluginEnb` 启用（`adapted=173510` 放行）；前台 10 项注入特征齐全且版本标识为 1.1.0；设置页 200 且接入官方后台框架、配置初始化 7 行 | 6/6 ✅ |
+| `V6` | 停用 → 前台停注入；重启用后配置逐行沿用、前台恢复注入 | 3/3 ✅ |
+| `V7`–`V8` | 官方 `app_del.php` 卸载后目录整体移除、配置按设计保留、前台正常；随后复原站点 | 4/4 ✅ |
 
-> 附带反向验证：`?act=Admin`（大写 A）会被拦回登录页 —— Z-Blog 的 actions 表全小写，
-> 这是本插件早期踩过的坑，已固化为断言。
+**结论**：`dist/` 内分包已是**含 `array_key_exists` 修复的当前版本**，`<verify>` 为正式站指纹，可直接用于 1.1.0 发布。原 §5.4 记录的「修复前产物」阻断项**已解除**。
 
-## 7.2 官方《注意事项速查表》逐条核对（桌面 `zblog开发注意事项`）
+**连带影响（仍需在发布前处理）**：`docs/MARKET_AUDIT_REPORT.md`、`docs/PACKAGE_AUDIT_REPORT.md` 中记录的体积与 MD5（50459 B / `e8554d0d15fac7f241ab6d166e2c8533`）对应的是**修复前分包**，已按本文 §5.3 的新值同步更新；两份报告的其余结论仍针对修复前构建，未随本次复跑（见 §10）。
 
-| 条目 | 核对结果 |
-|---|---|
-| 开发模式下不报错 | ✅ 见 7.1，八类报错零命中 |
-| 影响数据/文件的操作须加 CSRF Token | ✅ 设置页 `CheckIsRefererValid()`；实测篡改 token 被拦（HTTP 500）且配置未变 |
-| 函数名以应用 ID 开头 | ✅ 全部 `at8_pagespeed_*` |
-| 自建表 / 模块命名 `plugin_appID_*` | ✅ N/A（不建表、不建模块） |
-| 站内链接须用绝对地址（`$zbp->host` / bloghost） | ✅ 菜单、资源、API 全部 `$zbp->host` 拼接 |
-| 服务端网络请求用自带 Network | ✅ N/A（无任何出站请求） |
-| 用 `zbignore.txt` 排除打包文件 | ✅ 已排除 CHANGELOG / RELEASE_CHECKLIST / `screenshots` / `cache` / `.git` / `zbignore.txt` 自身；**`README.md`、`LICENSE`、`logo.png` 保留在包内**（另有不依赖 zbignore 的强制排除清单兜底，见 §9） |
-| 不自带 jQuery | ✅ 媒体库用原生 `XMLHttpRequest`；本插件无 JS 框架依赖 |
-| 编辑器通用性 | ✅ N/A（不涉及编辑器） |
-| 主题模板 HTML 在当前文件内闭合 | ✅ N/A（插件；后台页走官方框架 `admin_header/top/footer`） |
-| 定制字体图标而非引入整套 | ✅ 无外部图标库 |
-| 不写死与自己强关联的东西 | ✅ 无硬编码站点域名 / 路径 |
-| CSS、JS 走外部引用，不用 `style=""` | ✅ CSS/JS 均外部文件；`style=""` 0 处（仅测试夹具里有） |
-| **放弃 `var`，改用 `let` / `const`** | ✅ **1.0.5 修正**：两个自研脚本原用 `var`（共 23 处），已全部改为 `let`/`const` |
-| `link:css` / `script:js` 弃用非必要属性 | ✅ 无 `type="text/javascript"`；`defer` 为功能必需保留 |
-| 正则用否定匹配而非 `.*?` | ✅ `.*?` 0 处（已扫描） |
-| logo 等替代性文件不走附件机制 + zbignore 防覆盖 | ✅ `logo.png` 随包发布，`zbignore` 未排除（需随包）但不走附件机制 |
-| 保存配置用 `SetHint` + `Redirect` 而非 `ShowHint` | ✅ `main.php` 用 `$zbp->SetHint('good', ...)` + `Redirect('./main.php')` |
-| 有限度使用 Heredoc | ✅ 未使用 |
+## 6. 官方安装链路全流程实测（S2–S9，运行期 105/105）
 
-## 8. 安装 / 停用 / 卸载 / 升级测试清单
+全程走官方链路，**不使用**任何私有部署脚本：
+上传 `app_upload.php`（multipart + `token=GetToken('AppCentre')`）→ 启用 `cmd.php?act=PluginEnb` → 停用 `cmd.php?act=PluginDis` → 删除 `app_del.php` → 打包 `app_pack.php`。
 
-可勾选的验收项。**判定标准**列即通过条件，不满足即为不通过，不允许「大致正常」。
-命令中的 `zbp_config` 记录数用：`SELECT COUNT(*) FROM zbp_config WHERE conf_Name='at8_pagespeed';`
+| 阶段 | 断言数 | 结果 | 关键结论 |
+|---|---|---|---|
+| `S2` 干净状态基线 | 3/3 | ✅ | 未安装时前台零输出、插件列表无此项、`zbp_config` 无本插件行 |
+| `S3` 上传→启用→设置页 | 27/27 | ✅ | 落地文件与包内清单**严格相等**；上传**不触发生命周期钩子**（不写配置）；启用后前台 10 项注入特征全过；设置页接入官方后台框架（`divMain` + 左侧菜单 + 官方 CSS）；进入设置页初始化 7 行配置（6 键 + `ConfigVer=3`）；后台页与登录页均不注入 |
+| `S4` 设置页写入与边界 | 21/21 | ✅ | 见 §7.1 |
+| `S5` 停用与重启用 | 9/9 | ✅ | 停用后配置**逐行保留**、前台停止注入、设置页被 `CheckPlugin` 拦截；重启用后配置原样沿用 |
+| `S6` 覆盖升级 1.0.9 → 1.1.0 | 15/15 | ✅ | 见 §7.2 |
+| `S7` 卸载与重装 | 9/9 | ✅ | 删除应用后目录移除、配置按设计保留、其它插件配置不受影响；重装后**自动沿用旧配置** |
+| `S8` `adapted` 门槛反向验证 | 5/5 | ✅ | `adapted=173600` 被拒（错误 78）／`173510` 放行 |
+| `S9` debug 模式零报错 | 9/9 | ✅ | 6 个页面 + 保存 + 清除配置，八类报错（`Fatal`/`Parse`/`Warning`/`Notice`/`Deprecated`/`Strict Standards`/`Uncaught`/`Undefined`）**零命中**；结束时已还原 `ZC_DEBUG_MODE=false` |
 
-### 8.1 全新安装（干净站点，从未装过）
+### 6.1 前台注入实测（`S3.5`，10 项特征全过）
 
-- [x] **A1** 应用中心上传 `zba` → 安装成功，无报错、无 `ShowError`
-  - 判定：插件目录出现且文件数 = 包内文件数（当前 **10**）
-- [x] **A2** 插件列表启用 → 成功，前台立即生效
-  - 判定：前台源码出现 `<!-- at8_pagespeed <版本> -->` 注释
-- [x] **A3** 配置初始化正确
-  - 判定：`zbp_config` 中 `conf_Name='at8_pagespeed'` 记录数 ≥ 7，且 `ConfigVer` 存在
-- [x] **A4** 默认值符合预期
-  - 判定：预加载开、懒加载开、DNS 预取开、延迟 65ms、跳过首屏 2 张
-- [x] **A5** 后台设置页可正常打开与保存
-  - 判定：HTTP 200，左侧菜单 14 项含 `nav_at8_pagespeed`，保存后 302 回设置页且值落库
+启用后前台 `header` 注入 `<!-- at8_pagespeed 1.1.0 -->` + `<meta http-equiv="x-dns-prefetch-control" content="on">` + `<link rel="dns-prefetch">`（本站域名）；
+`footer` 注入 `window.at8PsLazySkip` + `at8-lazy.js`（`defer`）+ 内联写 `document.body` 的 `data-instant-intensity` + `window.at8PsBlacklist` / `window.at8PsPreloadDelay` + `at8-guard.js`（`defer`）+ `instantpage.js`（`defer`）；资源地址为**站内绝对地址**（`$zbp->host` 拼接）。
 
-### 8.2 重复安装（幂等性）
+### 6.2 主题兼容实测（含本次修复的缺陷复现）
 
-- [x] **B1** 改动若干配置 → 再次上传安装同一个包
-  - 判定：用户自定义值**不变**（不被默认值覆盖）
-- [x] **B2** 记录数不重复膨胀
-  - 判定：记录数仍为 7，不出现重复键
+| 断言 | 主题 | 结果 |
+|---|---|---|
+| `S3.15` | 官方默认主题 `default`（**不**自行填充 `$zbp->header`） | ✅ 1.1.0 正常注入（修复前为 0 注入） |
+| `S3.16` | 第三方主题 `tpure`（自行填充 `$zbp->header`） | ✅ 正常注入 |
+| `S3.15a` / `S3.16a` | 主题切换本身已生效（官方 `cmd.php?act=ThemeSet`，读回 `ZC_BLOG_THEME` 校验） | ✅ |
+| `S6.5b` | **1.0.9** + 官方默认主题 | ✅ **0 处注入** —— 缺陷实锤复现 |
+| `S6.5c` | 1.0.9 + `tpure` | ✅ 恢复注入（说明差异只来自主题，与切换动作无关） |
 
-### 8.3 停用（关键：历史 Bug 点）
+> 缺陷根因：1.7.5 核心 `$zbp->header` / `$zbp->footer` 属性默认值为 `null`，`MakeTemplateTags()` 中 `templateTags['header'] = &$zbp->header` 是**指向 null 的引用**，`isset()` 对 null 引用恒为 `false`。1.1.0 改为 `array_key_exists` 校验键存在，追加仍用 `.=`（null 安全转字符串）。
 
-- [x] **C1** 停用后配置**完整保留**
-  - 判定：停用前后 `SELECT conf_Key,conf_Value ...` 结果**逐行相同**
-- [x] **C2** 停用后前台不再注入
-  - 判定：前台源码中 `at8_pagespeed` 字样 0 命中
-- [x] **C3** 停用后后台菜单消失
-  - 判定：左侧菜单无 `nav_at8_pagespeed`
-- [x] **C4** 停用过程无报错
-  - 判定：无 `Fatal` / `Warning` / `Notice`
+## 7. 安全实测
 
-> 说明：1.7.5 `DisablePlugin()` 内部调用 `UninstallPlugin_<id>()`，停用与卸载共用钩子。
-> 因此 **C1 是本插件最重要的回归项**——一旦失败即为用户数据丢失（1.0.0 曾发生，已修复）。
+### 7.1 设置页写入与输入边界（`S4` 21/21）
+
+| 断言 | 检查 | 结果 |
+|---|---|---|
+| `S4.1` | 合法 `csrfToken` 保存生效，302 回本页 | ✅ |
+| `S4.2`/`S4.3` | 自定义值落库并在前台生效（延迟 222 / 跳过 9 / 黑名单 / DNS 域名） | ✅ |
+| `S4.4` | **篡改** `csrfToken` 的保存被官方 `CheckIsRefererValid()` 拦截（HTTP 500「非法访问」）且配置未变 | ✅ |
+| `S4.5` | **缺失** `csrfToken` 同样被拦截且配置未变 | ✅ |
+| `S4.6` | 写操作只认 POST（GET 携带 `act=save` 不产生写入） | ✅ |
+| `S4.7`–`S4.9` | 边界钳制：`99999→2000`、`999→20`、`-5→0`、`-1→0`、`"abc"→0`、`"1.9"→1` | ✅ 不落脏值 |
+| `S4.10` | `delay=0` 为合法值（前台输出 `intensity=0`，未被误判为关闭） | ✅ |
+| `S4.11`/`S4.12` | DNS 恶意输入（`<script>`、`javascript:`、协议、路径、端口、空格、`http://` 空前缀）保存即丢弃；前台 DNS 输出仅含归一后的合法域名 | ✅ |
+| `S4.13`/`S4.14` | 黑名单保存语义：空行丢弃、`trim`、CRLF 归一、`>100` 字符行丢弃；前台为 JSON 数组、顺序原样、**不追加任何条目** | ✅ |
+| `S4.15`/`S4.16` | 黑名单含 `</script>` 可保存，前台以 `\u003C` 转义输出，**未发生 script 上下文 breakout** | ✅ |
+| `S4.17`/`S4.18` | `act=reset` 清除配置：本插件配置行全删，系统与其它插件配置**逐行不变** | ✅ |
+| `S4.19` | 清除配置同样受 CSRF 保护（篡改 token 被 500 拦截，配置不被删除） | ✅ |
+| `S4.20`/`S4.21` | 清除后重开设置页按 migrate 重建默认值（7 行），前台恢复默认输出 | ✅ |
+
+### 7.2 覆盖升级（`S6` 15/15）
+
+用 `git tag v1.0.9` 导出真实旧版源码 → 官方 `app_pack` 打出 1.0.9 包（10 文件）→ 官方上传安装并启用 → 自定义配置 → 官方上传 1.1.0 包覆盖升级。
+
+| 断言 | 检查 | 结果 |
+|---|---|---|
+| `S6.2`/`S6.3` | 1.0.9 包结构正确、安装落地 10 文件 | ✅ |
+| `S6.4` | 1.0.9 启用成功（`adapted=173510` 在基准站放行） | ✅ |
+| `S6.6` | 1.0.9 下自定义配置落库（延迟 333 / 跳过 11 / `oldonly` / `old.example.com`） | ✅ |
+| `S6.7` | 1.1.0 覆盖升级成功，落地文件 = 1.1.0 包内清单（**11 个，严格相等**） | ✅ |
+| `S6.8`/`S6.9` | 升级后配置**原样保留**、仍处启用态、配置行数不膨胀（7 行） | ✅ |
+| `S6.10` | 版本标识更新为 1.1.0（注释与 `js?v=1.1.0`），旧 1.0.9 标识不再出现 | ✅ |
+| `S6.11`/`S6.12` | 手动覆盖升级场景下，进入设置页触发型幂等迁移（`ConfigVer=3`、行数仍 7、用户黑名单不被改动），设置页回显旧配置 | ✅ |
+
+> 说明：核心没有 `UpdatePlugin()` 函数，官方升级钩子由后台 `misc&type=updatedapp` 路由（浏览器执行）触发，**手动覆盖文件升级不会触发**。因此迁移在 `InstallPlugin_` / `UpdatePlugin_` / 设置页加载**三处**调用，`S6.11` 验证的正是第三条路径。
+
+### 7.3 卸载与重装（`S7` 9/9）
+
+`S7.1` 删除前需先停用（`App::CanDel()` 要求未启用）→ `S7.2` 目录整体移除 → `S7.3` 配置**按设计保留** → `S7.4` 其它插件与系统配置逐行不变 → `S7.5` 前台正常无报错 → `S7.6` 插件管理页正常 → `S7.7` 重新上传安装 → `S7.8`/`S7.9` **自动沿用旧配置**（444 / 跳过 13 / `keepme` / `keep.example.com`）。
+
+> 设计取舍：1.7.5 的「停用」与「卸载」共用 `UninstallPlugin_<id>()` 钩子（`DisablePlugin()` 内部调用它），而真正的「删除应用」由 AppCentre 直接删目录、**不触发**该钩子。因此该钩子内**不得删除配置**——否则用户每次停用都会丢设置。`S5.2` / `S5.7` 即为该结论的实测证据。
+
+## 8. 生命周期验收清单（对照实测断言）
+
+判定标准即通过条件；括号内为本次实测通过的断言编号。
+
+### 8.1 全新安装
+- [x] **A1** 官方上传安装成功，无报错 —— 文件数 = 包内 11（`S3.1`/`S3.2`）
+- [x] **A2** 启用后前台立即生效（出现 `<!-- at8_pagespeed 1.1.0 -->`）（`S3.4`/`S3.5`）
+- [x] **A3** 配置初始化正确（≥7 行且含 `ConfigVer`）（`S3.9`）
+- [x] **A4** 默认值符合预期（预加载开、懒加载开、延迟 65ms、跳过首屏 2 张、7 条通用黑名单、DNS 空）（`S3.10`）
+- [x] **A5** 设置页 HTTP 200、接入官方后台框架、保存 302 且值落库（`S3.6`/`S3.7`/`S3.8`/`S4.1`）
+
+### 8.2 重复安装（幂等）
+- [x] **B1** 自定义值不被默认值覆盖（`S3.13`）
+- [x] **B2** 配置行数不膨胀（仍 7 行）（`S3.14`）
+
+### 8.3 停用（历史 Bug 点，最重要回归项）
+- [x] **C1** 配置**完整保留**（停用前后逐行相同）（`S5.2`）
+- [x] **C2** 前台不再注入（`S5.4`）
+- [x] **C3** 设置页被 `CheckPlugin` 拦截、不再渲染表单（`S5.5`）
+- [x] **C4** 停用过程无报错，且不越界改动其它配置（`S5.3`）
 
 ### 8.4 重新启用
+- [x] **D1** 配置沿用（`S5.7`）
+- [x] **D2** 前台恢复注入且参数正确（`S5.8`）
+- [x] **D3** 设置页回显值 = 停用前值（`S5.9`）
 
-- [x] **D1** 启用后配置沿用
-  - 判定：自定义值与停用前一致（如自定义 `preload_delay=180` 仍为 180）
-- [x] **D2** 前台恢复注入且参数正确
-  - 判定：注入片段含 `data-instant-intensity="180"` 等自定义值
-- [x] **D3** 无需重新配置即可工作
-  - 判定：设置页显示值 = 停用前的值
-
-### 8.5 版本升级（覆盖安装，不删目录）
-
-- [x] **E1** 旧版本配置完整继承
-  - 判定：升级前后配置键集合相同、自定义值不变
-- [x] **E2** 新增配置键被补齐
-  - 判定：新版本新增的键出现在库中，且为默认值（不破坏已有值）
-- [x] **E3** 版本标识同步更新
-  - 判定：`include.php` 常量与 `plugin.xml` 的 `<version>` 均为新版本
-- [x] **E4** 落地文件与包内清单严格相等
-  - 判定：目录内文件数 = 包内文件数，无旧版本残留文件
-- [x] **E5** 升级后无 `.git` / `cache` / `screenshots` 等不应出现的目录
-  - 判定：`find` 无命中（`cache/` 为运行时目录属例外，见 8.6）
-- [x] **E6** 实测记录：1.0.2 → 1.0.3 → 1.0.4 → 1.0.5 均通过（1.0.6 仅调整 JS 注入转义标志与文档表述，未变更生命周期逻辑，沿用 1.0.5 结论）；**1.0.7 新增 `ConfigVer` 1 → 2 迁移分支，已在测试站覆盖安装实测**（见 8.5 之 1.0.7 小节）
+### 8.5 版本升级（覆盖安装）
+- [x] **E1** 旧版本配置完整继承（`S6.8`）
+- [x] **E2** 缺失配置键被补齐、既有值不被破坏（`S6.11`）
+- [x] **E3** 版本标识同步更新（`S6.10`）
+- [x] **E4** 落地文件与包内清单严格相等、无旧版残留（`S6.7`）
+- [x] **E5** 无 `.git` / `screenshots` 等不应出现的目录（`S1.3`/`S1.4`）
+- [x] **E6** 实测记录：**1.0.9 → 1.1.0** 已通过（`S6` 全节）；更早版本链未随本次复跑，见 §10
 
 ### 8.6 卸载（删除应用）
+- [x] **F1** 插件目录被移除（`S7.2`）
+- [x] **F2** 配置保留（有意设计，重装自动沿用）（`S7.3`/`S7.8`）
+- [x] **F3** 无残留数据表 / 文件（不建表、不写文件）（`D.1`/`D.3`）
+- [x] **F4** 彻底清除配置的入口已提供：后台「高级 → 清除插件配置」（二次确认，只删本插件配置）（`S4.17`/`S4.18`）
 
-- [x] **F1** 删除应用后插件目录被移除
-  - 判定：目录不存在
-- [x] **F2** 配置**保留**（有意设计，非残留 Bug）
-  - 判定：`zbp_config` 中仍有 `conf_Name='at8_pagespeed'` 记录，重装后自动沿用
-- [x] **F3** 无残留数据表 / 文件
-  - 判定：不建表；`zb_users/upload/` 等其他目录无本插件写入物
-  - 例外：`zb_users/plugin/at8_pagespeed/cache/` 为运行时缓存，随目录一并删除
-- [x] **F4** 彻底清除配置的手动方式已文档化
-  - 判定：README「生命周期与数据」写明 `DELETE FROM zbp_config WHERE conf_Name='at8_pagespeed';`
+### 8.7 debug 模式
+- [x] 前台首页 / 前台文章页 / 后台首页 / 插件管理页 / 插件设置页 / 登录页 / 保存配置 / 清除配置：八类报错零命中（`S9.1`–`S9.8`）
 
-### 8.7 自动化回归脚本对照
-
-| 脚本 | 覆盖项 | 当前结果 |
-|---|---|---|
-| `test_user_flow_debug.py` | **模拟用户全流程 + debug**：登录 / 配置 / 边界值 / 恶意输入 / 传文件 / 停用 / 启用 | **52 PASS / 0 FAIL** |
-| `test_zba_install_clean.py` | A1 / A3 / A4 / E1 / E3 / E4 / E5（官方上传应用链路） | 25 PASS / 0 FAIL |
-| `audit_repro_disable.py` | C1 / D1 / D2（数据丢失 Bug 复现与修复验证） | PASS |
-| `audit_pagespeed.py` | A2 / A5 / C2 / C3 / D2 + 安全与权限 | 39 PASS / 0 FAIL |
-| `test_ps_js_units.py` | 前台脚本功能级（黑名单 / 懒加载 / 容器级排除 / 动态兜底） | 22 PASS / 0 FAIL |
-| `_check_zba_struct.py` | 打包结构（gzip 魔数 / 根属性 / folder+file 节点 / 路径规范） | 26 PASS / 0 FAIL |
-| `_scan_security.py` | 危险函数 / 外站资源 / BOM / `!important` | 需复核项 0 |
-
-## 9. 发布物
-
-- `at8_pagespeed_1.0.9_20260925.zba`（**43.7 KB / 44704 B，10 文件**，md5 `395b9c871c1ba41318d741ca4b7f1961`）
-  - **实际解包核对**（不依赖 `zbignore.txt` 判断）：
-    - **包内 10 个**：`plugin.xml`、`include.php`、`main.php`、`style.css`、`assets/at8-guard.js`、
-      `assets/at8-lazy.js`、`assets/instantpage.js`、`logo.png`、`LICENSE`、`README.md`
-    - **包外**：`CHANGELOG.md`、`RELEASE_CHECKLIST.md`、`screenshots/`、`cache/`、`.git/`、`zbignore.txt`
-  - 校验：`_check_zba_struct.py` **26/26 PASS**（S10 `version=1.0.9` / `phpver=7.4` / `adapted=173510`）、
-    `_verify_final_zba.py` 反向逐字节比对一致 + 排除/保留核验 12 项全 PASS + 敏感串扫描通过
-  > ⚠️ 打包污染教训：本插件目录内就是 git 工作区，早期打包脚本只按 `zbignore.txt` 排除，
-  > 导致 `.git` 整棵树（35 个文件、约 51 KB）被打进分包。现已在 `build_zba.php` 加入
-  > 「不依赖 zbignore 的强制排除清单」，并对包内文件做逐文件 MD5 校验（`_verify_zba.py`）。
-- 上架截图 `screenshots/`（不进分包，仅供应用中心上传）：`01-后台设置页.png`（1600×1310）、
-  `02-前台页面-加速生效.png`（1600×1000）、`03-前台注入优化代码.png`（1600×542）
-- GitHub：https://github.com/361611074/at8_pagespeed
-
-## 10. Z-Blog 应用中心上架自检（对官方《发布应用》标准逐条）
-
-依据：https://docs.zblogcn.com/php/dev-publish 与《应用审核拒绝标准》。
+## 9. 应用中心上架自检（逐条，标注本次实测依据）
 
 ### A. 通用
-
-| 标准 | 自检结果 |
-|---|---|
-| 开启 debug 模式后不得报错 | ✅ 测试站 debug 插件开启状态下，前台与后台页面 `Fatal/Parse/Warning/Deprecated/Notice/Uncaught` 零命中 |
-| 不得含有木马等有害代码 | ✅ 全部源码人工可读，无 eval / base64 解码执行 / 混淆 |
-| 不得含有被加密的 PHP | ✅ 全明文提交，无 Z5 或任何加密 |
-| PHP 文件须 UTF-8 无 BOM | ✅ 全量检测 0 处 BOM |
-| 不得有安全漏洞（SQL 注入 / XSS / CSRF） | ✅ 无 SQL 拼接；输出全部转义；写操作 `CheckIsRefererValid()` + `CheckRights('admin')` |
-| **不得引用外站资源** | ✅ 全部资源本站内置（`assets/` 本地文件 + 站内绝对路径）；instant.page 为本地文件而非 CDN |
-| 自动审核不得有黄色提示（老旧 JS 等） | ⚠️ 内置 instant.page v5.2.0（上游最新版，MIT，本地文件）；如自动审核报提示，按意见替换版本 |
-| 不得跳过应用中心支付系统搞内置收费 | ✅ 完全免费，无任何付费校验或外部接口 |
-| 不得修改系统源码或默认语言包 | ✅ `zb_system/` 与语言包零改动 |
+| 标准 | 本次依据 | 结果 |
+|---|---|---|
+| 开启 debug 模式后不得报错 | `S9` 9/9 | ✅ |
+| 不得含木马等有害代码 | `E.5` 无 `eval` / `base64_decode` / `assert`；源码全明文可读 | ✅ |
+| 不得含被加密的 PHP | 全明文提交，无 Z5 或任何加密 | ✅ |
+| PHP 文件须 UTF-8 无 BOM | `E.3` | ✅ |
+| 不得有安全漏洞（SQL 注入 / XSS / CSRF） | `S4.4`/`S4.5`/`S4.11`/`S4.12`/`S4.16`/`S4.19`；不拼接 SQL（`D.1`） | ✅ |
+| **不得引用外站资源** | `D.7` 零命中；`D.5` 第三方 JS 为本地文件 | ✅ |
+| 不得跳过应用中心支付系统搞内置收费 | 完全免费，无任何付费校验或外部接口 | ✅ |
+| 不得修改系统源码或默认语言包 | `C.1` 四目录逐字节一致 | ✅ |
 
 ### C. 插件专项
-
-| 标准 | 自检结果 |
-|---|---|
-| 数据库表与 Class 使用 zbp 标准规范 | ✅ 不建表、不自建 Class |
-| 数据库操作走系统链式对象，不自行拼接 SQL | ✅ 不直接操作数据库，仅用 `$zbp->Config()` 官方配置存取 |
-| 应用 `$zbp->CheckRights` 判权限，而非 `$zbp->User->Level` | ✅ `main.php` 用 `CheckRights('admin')`，且未出现裸 `User->Level` 判定 |
+| 标准 | 本次依据 | 结果 |
+|---|---|---|
+| 数据库表与 Class 使用 zbp 标准规范 | `D.1` 不建表、不自建 Class | ✅ |
+| 数据库操作走系统链式对象，不自行拼接 SQL | `D.1`；仅用官方 `$zbp->Config()` / `SaveConfig()` / `DelConfig()` | ✅ |
+| 应用 `$zbp->CheckRights` 判权限，而非裸 `User->Level` | 源码仅 `CheckRights('admin')`，无裸 `User->Level` 判定 | ✅ |
+| 使用 `zbignore.txt` 排除打包文件 | `S1.3`/`S1.4` 包内清单与排除结果完全一致 | ✅ |
 
 ### D. 应用发布内容
-
-| 标准 | 自检结果 |
+| 标准 | 状态 |
 |---|---|
-| 后台截图（有后台配置须提供） | ✅ `01-后台设置页.png` |
-| 前台展示截图 | ✅ `02-前台页面-加速生效.png`（前台外观不受影响）+ `03-前台注入优化代码.png`（注入内容证据） |
-| 基本 / 详细使用说明与功能介绍 | ✅ `plugin.xml` 的 `<description>` 详细说明三大功能；`README.md` 含功能、安装、生命周期、安全说明 |
+| 后台配置页截图 | 需在发布前补/更新为 1.1.0 界面（`screenshots/` 不进分包） |
+| 前台展示截图 | 同上 |
+| 基本 / 详细使用说明 | ✅ `plugin.xml` `<description>` + `README.md`（含功能、安装、生命周期、安全） |
 
-### E. 禁止条款
+## 10. 未随本次复跑的历史结论（不得直接引用）
 
-| 标准 | 自检结果 |
+以下为 1.0.x 版清单中出现、但**本次未重新执行**的项目。如需在发布说明或对外材料中引用，必须先重跑：
+
+| 项目 | 未复跑原因 |
 |---|---|
-| 禁止抄袭复制有版权保护的主题模板 | ✅ 原创实现；第三方仅 instant.page（MIT，已保留原始许可头并在 `LICENSE` 声明）；**1.0.3 已清除 `<source>` 中与他人标识冲突的模板遗留值** |
-| 禁止多次提交无意义应用刷排行 | ✅ 首次提交本应用 |
+| PHP **7.3.4** 的 `php -l` | 本次本机仅有 PHP 8.2.33；`<phpver>7.4</phpver>` 的依据改为「8.2.33 通过 + 无 PHP 8.0+ 语法」 |
+| 远程测试站 `zblog.xmm.fan`（PHP 8.3.33 / MySQL） | 本次改用本地 1.7.5.3510 + SQLite 站点；MySQL 兼容性未随本次复跑 |
+| `node --check`（3 个 JS 文件） | 本次未执行 JS 语法检查 |
+| 前台脚本**功能级**测试（22 项，`test_ps_js_units.py`） | 该脚本不在本仓库，本次未执行 |
+| 界面回归 / 布局对齐实测（1440×900） | 本次未执行 |
+| 1.0.2 → 1.0.3 → 1.0.4 → 1.0.5 → 1.0.7 的历史升级链 | 本次仅复跑 **1.0.9 → 1.1.0** |
+| `_check_zba_struct.py` / `_verify_final_zba.py` / `_scan_security.py` / `audit_pagespeed.py` / `test_zba_install_clean.py` / `build_zba.php` 等脚本 | 上述脚本均不在本仓库（`scripts/` 内仅 `market-audit.py`），本次未执行；本次改以 `run_tests.py` / `run_tests_lifecycle.py` / `run_static_checks.py` 复跑 |
+| 「媒体库 上传/改名/删除」「两个插件各一轮停用」等用例 | 属另一插件（`at8_media_library`）的清单内容，1.0.9 版清单误留，本次已移除 |
+| 自动审核对内置 instant.page 的黄色提示 | 需在应用中心提交后以实际审核结果为准 |
+| `docs/` 下 7 份审计报告（`MARKET_AUDIT_REPORT.md` / `PACKAGE_AUDIT_REPORT.md` / `SECURITY_AUDIT_REPORT.md` / `LIFECYCLE_AUDIT_REPORT.md` / `TEST_MATRIX.md` / `THIRD_PARTY_LICENSE_REPORT.md` / `hook-audit.md`） | 均针对修复前构建生成，本次未重新生成；其中 2 份引用的发布物体积/MD5 已按 §5.3 的新值同步更新，其余结论未复跑 |
+
+## 11. 复现方式
+
+测试脚本位于本机工作区 `test/`（不进仓库、不进分包）：
+
+| 脚本 | 覆盖 | 本次结果 |
+|---|---|---|
+| `run_tests.py` | S0–S3：环境基线 / 官方打包 / 干净状态 / 官方安装链路 | **41/41 PASS**（`results_s0_s3.json`） |
+| `run_tests_lifecycle.py` | S4–S9：设置页与边界 / 停用重启用 / 覆盖升级 / 卸载重装 / `adapted` 门槛 / debug 零报错 | **68/68 PASS**（`results_lifecycle.json`） |
+| `run_static_checks.py` | A–E：元数据一致性 / 官方接口存在性 / 核心目录逐字节对比 / 无自建重复系统 / 代码质量 | **59/59 PASS**（`results_static.json`） |
+| `pack_release.py` | R0–R5：官方打包 / `<verify>` 正式站指纹 / 结构元数据 / 清单与逐字节 / 与基线包差分 / 落盘 | **24/24 PASS** |
+| `verify_release.py` | V0–V8：用最终发布物走官方安装链路（上传 / 启用 / 前台 / 设置页 / 停用重启用 / 卸载 / 复原） | **23/23 PASS**（`results_release_install.json`） |
+| 合计 | | **215/215 PASS / 0 FAIL** |
+
+环境搭建要点：官方 `zblogphp-1.7.5.3510.zip` 解压为站点根 → SQLite 库 → 后台管理员登录 → 官方 AppCentre 在场（提供 `app_pack` / `app_upload` / `app_del`）。
+
+执行顺序有依赖：`run_tests.py` 会先把站点恢复到「干净 → 官方安装 → 启用」状态，`run_tests_lifecycle.py` 的 S4 依赖该状态，须**按表中顺序**执行。`run_static_checks.py` 为纯文件分析，可并行。
+
+已知环境抖动与处理：测试站为 PHP 内置服务器（`php -S`，单进程、响应带 `Connection: close`）。请求跟随重定向时需新建连接，偶发连不上，此时 `curl -w %{http_code}` 只保留「最后收到的响应码」（302/301）而 `-s` 吞掉错误，会让 `follow=True` 的断言随机变红（本次复跑曾命中 S7.6 / S9.6）。`zt_lib.curl()` 已把「`code=000`」与「`follow=True` 却仍返回 3xx」一并纳入重试条件，消除该抖动；上述两段脚本重跑后均为满通过。
+
+## 12. 发布前必须完成
+
+- [x] ~~重新打包 1.1.0 分包~~ —— 已完成，见 §5.3 / §5.4（新包已含 `array_key_exists` 修复，逐文件 MD5 与仓库一致）
+- [x] ~~在目标站点执行官方打包并记录体积与 MD5~~ —— 已完成，`<verify>` 为正式站指纹 `https://www.at8.fun/`；体积 51017 B / MD5 `e0058763e5d2d476ad7960ff23a83ca0`
+- [ ] 更新 `screenshots/` 为 1.1.0 实际界面
+- [ ] 如需在对外材料引用 §10 中的历史结论，先重跑对应脚本
+
+---
+
+**结论**：1.1.0 在 **Z-BlogPHP 1.7.5 Build 3510 + PHP 8.2.33 + SQLite** 环境下，**215 项实测断言全部通过**；未修改任何核心文件、无新增非官方 Hook、无自建重复业务系统、无未经许可的第三方代码。发布物 `dist/at8_pagespeed_1.1.0_20260925.zba`（51017 B / MD5 `e0058763e5d2d476ad7960ff23a83ca0`）已按官方链路打包并**用该产物本身**通过安装链路验收（§5.4），**无发布阻断项**。

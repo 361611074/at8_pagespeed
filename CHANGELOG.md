@@ -4,6 +4,19 @@
 
 **面向 Z-Blog 应用中心审核的合规迭代。无新业务功能，不新增 Hook，不改系统行为。**
 
+### 修复
+
+- **前台在官方默认主题上完全不注入（功能性 Bug）**：1.7.5 核心 `$zbp->header` /
+  `$zbp->footer` 属性默认值为 `null`（`lib/zblogphp.php` 属性声明
+  `public $header = null;` / `public $footer = null;`），且**只有主题自行填充后才非 null**
+  （如 tpure 在 `Filter_Plugin_Zbp_MakeTemplatetags` 里 `$zbp->header .= ...`）。
+  `MakeTemplateTags()` 中 `templateTags['header'] = &$zbp->header` 是指向 null 的引用，
+  原实现用 `isset($tags['header'])` 判断，对 null 引用恒为 false，
+  导致官方默认主题（default / Zit 等不自行填充该属性的主题）下前台**一行都不注入**。
+  实测复现：同一站点、同一配置，tpure 主题注入 5 处标记，官方默认主题 0 处。
+  已改为 `array_key_exists` 校验键存在（模板标签键始终由核心创建），追加仍用 `.=`
+  （null 被安全转为字符串）；实测官方默认主题下注入恢复正常，tpure 主题不受影响。
+
 ### 新增
 
 - **`THIRD-PARTY-LICENSES.md`**：记录内置第三方组件 instant.page v5.2.0 的版本、来源、许可证（MIT）
