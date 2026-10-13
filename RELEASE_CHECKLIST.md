@@ -6,7 +6,7 @@
 **检查基准**：《Z-BlogPHP 插件 AI Agent 开发规范》§29 + 应用中心上架审核清单
 
 > **本清单的编写原则**
-> 1. **只记录 2026-10-13 本次实际重新执行并通过的断言**，共 **215 项**（S0–S9 运行期 109 项 + A–E 静态 59 项 + 发布物打包与安装验收 47 项），全部 PASS / 0 FAIL。
+> 1. **只记录 2026-10-13 本次实际重新执行并通过的断言**，共 **224 项**（S0–S9 运行期 109 项 + A–E 静态 59 项 + 发布物打包与安装验收 47 项 + 远程真机 9 项），全部 PASS / 0 FAIL。
 > 2. 往届版本（1.0.x）的测试结论**不再直接沿用**；未随本次重新执行的项已单独列在 **§10**，需要时须重跑后方可引用。
 > 3. 每条断言都有稳定编号（如 `S5.2`、`A.6`），可用 §11 的命令复现。
 
@@ -207,6 +207,28 @@ at8_pagespeed/assets/at8-lazy.js
 
 > 缺陷根因：1.7.5 核心 `$zbp->header` / `$zbp->footer` 属性默认值为 `null`，`MakeTemplateTags()` 中 `templateTags['header'] = &$zbp->header` 是**指向 null 的引用**，`isset()` 对 null 引用恒为 `false`。1.1.0 改为 `array_key_exists` 校验键存在，追加仍用 `.=`（null 安全转字符串）。
 
+### 6.3 远程真机测试（`zblog.xmm.fan`，本次已复跑）
+
+环境：宝塔 Debian 12 + nginx + **Z-BlogPHP 1.7.5 Build 3540**（`blogversion=173540`）+ **PHP 8.3.33** + **MySQL 5.7**；主题 `tpure`；插件以**官方链路**部署（工作区文件与站点文件逐字节一致：`include.php` md5 `08ec159edfc5b35d2835963d66fd2916`、`main.php` md5 `168d568ca199df699b11ee3ae8cc4535`）。
+
+**零报错证明（日志差分法）**：先对 `zb_users/logs/*.txt` 做快照，再只访问本插件相关页面，最后差分。
+
+| 断言 | 内容 | 结果 |
+|---|---|---|
+| `R6.3.1` | 当日错误日志中 `at8_pagespeed` 出现次数 | ✅ **0 次**（当日共 57 条 `ERROR` + 19 条 `EXCEPTION`） |
+| `R6.3.2` | 全历史日志中 `at8_pagespeed` 仅出现 6 次，均为 **2026-09-23** 的 `preg_replace(): Unknown modifier ']'`；该缺陷在当前版本已修（分隔符由 `/` 改为 `@`：`preg_replace('@[/?#].*$@', ...)`） | ✅ |
+| `R6.3.3` | 页面遍历：首页 / 后台首页 / 插件管理 / 设置页 / debug 插件页 / 媒体库页 → 均无 `Fatal error` `Warning` `Notice` `Deprecated` | ✅ |
+| `R6.3.4` | 与 **`debug` 插件 v1.0.4 共存无冲突**：同一页既有 debug 面板（`共执行 9 条 sql 语句`）又有本插件全部注入标记 | ✅ |
+| `R6.3.5` | 前台注入 10 项特征齐全，版本标识 `<!-- at8_pagespeed 1.1.0 -->` | ✅ |
+| `R6.3.6` | 保存自定义值（`preload_delay=321` / `lazy_skip=7` / `dns_domains=img.example.com` / 黑名单含 `mytest`）落库且前台生效 | ✅ |
+| `R6.3.7` | 「清除插件配置」后本插件配置行归零；重访设置页回填 7 行默认值（`preload_delay=65`） | ✅ |
+| `R6.3.8` | 篡改 `csrfToken` 的保存被官方 `CheckIsRefererValid` 拦截（HTTP 500「非法访问」） | ✅ |
+| `R6.3.9` | **对照实验**：`default` / `Zit` / `os2020` 主题前台返回 HTTP 500（错误码 **86「主题模板的编译文件不存在」**，出自 `zb_system/function/lib/template.php`）——**禁用本插件后仍为 500** ⇒ 与本插件无关；根因是 `zb_users/cache/compiled/` 下只有 `tpure/`，其它主题从未编译过 | ✅ 已排除 |
+
+> 该站当日全部错误的来源为：`cache/compiled/tpure/index.php`(28)、`c_system_route.php`(14，404 路由)、`AppCentre`(16)、`c_system_common.php`(8)、`theme/tpure/include.php`(4)、`c_system_event.php`(3)、`at8_media_library/api.php`(1)。均为 PHP 8.3 的 `E_DEPRECATED`（`json_decode` / `explode` / `trim` / `substr` / `urlencode` / `htmlspecialchars` 传 `null`），来自**旧插件与主题**，非本插件。
+
+> 说明：因该站 `default` 等主题缺少编译缓存，**真机主题矩阵无法复跑**；§6.2 的主题结论仍以本地 1.7.5.3510 站点为准。
+
 ## 7. 安全实测
 
 ### 7.1 设置页写入与输入边界（`S4` 21/21）
@@ -328,7 +350,7 @@ at8_pagespeed/assets/at8-lazy.js
 | 项目 | 未复跑原因 |
 |---|---|
 | PHP **7.3.4** 的 `php -l` | 本次本机仅有 PHP 8.2.33；`<phpver>7.4</phpver>` 的依据改为「8.2.33 通过 + 无 PHP 8.0+ 语法」 |
-| 远程测试站 `zblog.xmm.fan`（PHP 8.3.33 / MySQL） | 本次改用本地 1.7.5.3510 + SQLite 站点；MySQL 兼容性未随本次复跑 |
+| 远程测试站 `zblog.xmm.fan` 的**主题矩阵** | 该站 `default` / `Zit` / `os2020` 缺模板编译缓存（错误码 86），无法复跑主题矩阵；其余项已在 **§6.3** 复跑（PHP 8.3.33 + MySQL 5.7） |
 | `node --check`（3 个 JS 文件） | 本次未执行 JS 语法检查 |
 | 前台脚本**功能级**测试（22 项，`test_ps_js_units.py`） | 该脚本不在本仓库，本次未执行 |
 | 界面回归 / 布局对齐实测（1440×900） | 本次未执行 |
@@ -349,7 +371,8 @@ at8_pagespeed/assets/at8-lazy.js
 | `run_static_checks.py` | A–E：元数据一致性 / 官方接口存在性 / 核心目录逐字节对比 / 无自建重复系统 / 代码质量 | **59/59 PASS**（`results_static.json`） |
 | `pack_release.py` | R0–R5：官方打包 / `<verify>` 正式站指纹 / 结构元数据 / 清单与逐字节 / 与基线包差分 / 落盘 | **24/24 PASS** |
 | `verify_release.py` | V0–V8：用最终发布物走官方安装链路（上传 / 启用 / 前台 / 设置页 / 停用重启用 / 卸载 / 复原） | **23/23 PASS**（`results_release_install.json`） |
-| 合计 | | **215/215 PASS / 0 FAIL** |
+| 远程真机（SSH + curl） | R6.3：`zblog.xmm.fan`（PHP 8.3.33 + MySQL 5.7）日志差分零报错 / 功能实测 / 与 `debug` 插件共存 / 对照实验排除主题 500 | **9/9 PASS**（见 §6.3） |
+| 合计 | | **224/224 PASS / 0 FAIL** |
 
 环境搭建要点：官方 `zblogphp-1.7.5.3510.zip` 解压为站点根 → SQLite 库 → 后台管理员登录 → 官方 AppCentre 在场（提供 `app_pack` / `app_upload` / `app_del`）。
 
@@ -366,4 +389,4 @@ at8_pagespeed/assets/at8-lazy.js
 
 ---
 
-**结论**：1.1.0 在 **Z-BlogPHP 1.7.5 Build 3510 + PHP 8.2.33 + SQLite** 环境下，**215 项实测断言全部通过**；未修改任何核心文件、无新增非官方 Hook、无自建重复业务系统、无未经许可的第三方代码。发布物 `dist/at8_pagespeed_1.1.0_20260925.zba`（51017 B / MD5 `e0058763e5d2d476ad7960ff23a83ca0`）已按官方链路打包并**用该产物本身**通过安装链路验收（§5.4），**无发布阻断项**。
+**结论**：1.1.0 在 **Z-BlogPHP 1.7.5 Build 3510 + PHP 8.2.33 + SQLite**（本地）与 **Z-BlogPHP 1.7.5 Build 3540 + PHP 8.3.33 + MySQL 5.7 + nginx**（远程真机 `zblog.xmm.fan`）两套环境下，**224 项实测断言全部通过**；未修改任何核心文件、无新增非官方 Hook、无自建重复业务系统、无未经许可的第三方代码。发布物 `dist/at8_pagespeed_1.1.0_20260925.zba`（51017 B / MD5 `e0058763e5d2d476ad7960ff23a83ca0`）已按官方链路打包并**用该产物本身**通过安装链路验收（§5.4），**无发布阻断项**。
