@@ -164,6 +164,21 @@
 
 ## 更新日志
 
+### 1.1.1（2026-10-13）
+
+**修复 1.1.0 发布包中未包含的前台注入缺陷，并重建发布物。无新增功能、无新增 Hook、无新增权限、无配置结构变更。**
+
+- **修复：官方默认主题下前台完全不注入（功能性 Bug）**。1.7.5 核心 `$zbp->header` /
+  `$zbp->footer` 属性默认值为 `null`，`MakeTemplateTags()` 中
+  `templateTags['header'] = &$zbp->header` 是**指向 null 的引用**，原 `isset()` 判断对 null 引用
+  恒为 `false`，导致 `default` / `Zit` 等不自行填充该属性的主题下前台**一行都不注入**。
+  实测复现：同站点、同配置，`tpure` 注入 5 处标记，`default` 注入 0 处。
+  已改为 `array_key_exists` 校验键存在（模板标签键始终由核心创建），追加仍用 `.=`
+  （null 被安全转为字符串）；修复后 `default` 与 `tpure` 双主题均正常注入。
+- **重建发布包**：1.1.0 的 `.zba` 为修复前构建（含旧版 `include.php`），本版重新打包，
+  逐文件 MD5 与仓库一致。
+- 兼容性不变：最低 Z-BlogPHP 1.7.5 Build 3510 / PHP 7.4；`1.0.9 → 1.1.1` 覆盖升级与配置保留已实测。
+
 ### 1.1.0（2026-09-25）
 
 面向应用中心审核的合规迭代，**无新业务功能**：
@@ -171,7 +186,7 @@
 - 新增 `THIRD-PARTY-LICENSES.md`（第三方许可证与完整性校验）与「高级 → 清除插件配置」入口（带二次确认，只删本插件自己的配置）；
 - CSS class 前缀统一为 `.at8ps-*`；后台输出转义进一步加强；DNS 预取补充「不会向这些域名发送 API 请求」的说明；
 - 新增 `scripts/market-audit.py` 自动审核脚本、`release-manifest.txt` / `release-forbidden.txt` 与 `docs/` 审计报告；
-- **修复官方默认主题下前台不注入的问题**（1.7.5 核心 `$zbp->header` 默认为 null，原 `isset()` 判断恒 false）；
+- **前台默认主题不注入的修复未随 1.1.0 发布包分发**（该包为修复前构建），实际随 **1.1.1** 发布；
 - Hook 数量、默认黑名单、迁移策略均未改变。
 
 完整变更见 [`CHANGELOG.md`](CHANGELOG.md)，测试矩阵见 [`docs/TEST_MATRIX.md`](docs/TEST_MATRIX.md)。
